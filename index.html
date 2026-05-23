@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+        />
+        <title>Bubble Word Splash</title>
+        <style>
+            :root {
+                --bg-color: #0f172a;
+                --text-color: #f8fafc;
+                --bubble-outer: #3b82f6;
+                --bubble-center: #fbbf24;
+                --bubble-shadow: rgba(0, 0, 0, 0.4);
+                --radius: 100px; /* Radius of the orbit */
+            }
+
+            body {
+                margin: 0;
+                padding: 0;
+                background-color: var(--bg-color);
+                color: var(--text-color);
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    Helvetica, Arial, sans-serif;
+                overflow: hidden; /* App-like behavior, no page scrolling */
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+            }
+
+            /* --- STATS & UI BAR --- */
+            .stats-bar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 15px 20px;
+                background-color: rgba(255, 255, 255, 0.05);
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+                z-index: 10;
+            }
+
+            .score-display {
+                font-size: 1.2rem;
+                font-weight: bold;
+            }
+
+            #toggle-words-btn {
+                padding: 8px 16px;
+                background-color: #2563eb;
+                color: white;
+                border: none;
+                border-radius: 20px;
+                font-weight: bold;
+                cursor: pointer;
+                box-shadow: 0 4px 6px var(--bubble-shadow);
+            }
+
+            #toggle-words-btn:active {
+                background-color: #1d4ed8;
+            }
+
+            /* --- FOUND WORDS OVERLAY --- */
+            .found-words-section {
+                position: absolute;
+                top: 60px;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: rgba(15, 23, 42, 0.95);
+                overflow-y: auto;
+                z-index: 5;
+                padding: 20px;
+            }
+
+            .hidden {
+                display: none !important;
+            }
+
+            ul#found-words-list {
+                list-style-type: none;
+                padding: 0;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            ul#found-words-list li {
+                background-color: rgba(255, 255, 255, 0.1);
+                padding: 8px 15px;
+                border-radius: 15px;
+                font-size: 1.1rem;
+                text-transform: capitalize;
+            }
+
+            /* --- INPUT DISPLAY --- */
+            .input-display-container {
+                text-align: center;
+                margin-top: 30px;
+                height: 40px;
+            }
+
+            .input-display {
+                font-size: 2rem;
+                font-weight: bold;
+                letter-spacing: 2px;
+                text-transform: uppercase;
+            }
+
+            .center-letter-text {
+                color: var(--bubble-center);
+            }
+
+            /* --- RADIAL BUBBLE HIVE --- */
+            .hive-container {
+                position: relative;
+                width: 300px;
+                height: 300px;
+                margin: 40px auto;
+            }
+
+            .bubble {
+                position: absolute;
+                width: 80px;
+                height: 80px;
+                border-radius: 50%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 2rem;
+                font-weight: bold;
+                text-transform: uppercase;
+                cursor: pointer;
+                user-select: none;
+                color: white;
+                /* Water aesthetic via radial gradient */
+                background:
+                    radial-gradient(
+                        circle at 30% 30%,
+                        rgba(255, 255, 255, 0.8),
+                        transparent 40%
+                    ),
+                    radial-gradient(
+                        circle,
+                        var(--bubble-outer) 0%,
+                        #1e3a8a 100%
+                    );
+                box-shadow:
+                    0 10px 15px var(--bubble-shadow),
+                    inset -5px -5px 15px rgba(0, 0, 0, 0.3);
+                transition:
+                    transform 0.1s,
+                    top 0.3s,
+                    left 0.3s;
+                /* Center the bubble around its top/left origin */
+                transform: translate(-50%, -50%);
+            }
+
+            .bubble:active {
+                transform: translate(-50%, -50%) scale(0.9);
+            }
+
+            .bubble.center {
+                top: 50%;
+                left: 50%;
+                background:
+                    radial-gradient(
+                        circle at 30% 30%,
+                        rgba(255, 255, 255, 0.8),
+                        transparent 40%
+                    ),
+                    radial-gradient(
+                        circle,
+                        var(--bubble-center) 0%,
+                        #b45309 100%
+                    );
+                color: #451a03;
+                z-index: 2;
+            }
+
+            /* --- CONTROLS --- */
+            .controls {
+                display: flex;
+                justify-content: center;
+                gap: 15px;
+                margin-top: auto;
+                margin-bottom: 40px;
+            }
+
+            .btn {
+                padding: 15px 25px;
+                border-radius: 30px;
+                border: none;
+                font-size: 1rem;
+                font-weight: bold;
+                text-transform: uppercase;
+                cursor: pointer;
+                background-color: rgba(255, 255, 255, 0.1);
+                color: white;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            }
+
+            .btn:active {
+                background-color: rgba(255, 255, 255, 0.2);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="stats-bar">
+            <div class="score-display">
+                Score: <span id="current-score">0</span>
+            </div>
+            <button type="button" id="toggle-words-btn">
+                Show Found Words
+            </button>
+        </div>
+
+        <div class="found-words-section hidden" id="found-words-container">
+            <ul id="found-words-list"></ul>
+        </div>
+
+        <div class="input-display-container">
+            <div class="input-display" id="input-display"></div>
+        </div>
+
+        <div class="hive-container" id="hive"></div>
+
+        <div class="controls">
+            <button
+                type="button"
+                class="btn"
+                id="btn-delete"
+                onclick="deleteLetter()"
+            >
+                Delete
+            </button>
+            <button
+                type="button"
+                class="btn"
+                id="btn-shuffle"
+                onclick="shuffleLetters()"
+            >
+                Shuffle
+            </button>
+            <button
+                type="button"
+                class="btn"
+                id="btn-submit"
+                onclick="submitWord()"
+            >
+                Enter
+            </button>
+        </div>
+
+        <script>
+            // --- GAME DATA ---
+            // Replace this with your 18,983+ word array!
+            const FULL_DICTIONARY = [
+                "machine",
+                "mice",
+                "mince",
+                "name",
+                "nice",
+                "niche",
+                "niece",
+                "cane",
+                "chain",
+                "chime",
+                "chin",
+                "china",
+                "cinema",
+                "each",
+                "echo",
+                "hemic",
+                "inch",
+                "mach",
+                "mache",
+                "manic",
+                "mechanic",
+                "mica",
+            ];
+
+            const dictionary = new Set(FULL_DICTIONARY);
+            const puzzleCenterLetter = "c";
+            let puzzleOuterLetters = ["m", "a", "h", "i", "n", "e"];
+
+            // --- STATE ---
+            let currentInput = "";
+            let currentScore = 0;
+            let foundWords = new Set();
+
+            // --- DOM ELEMENTS ---
+            const inputDisplay = document.getElementById("input-display");
+            const hiveContainer = document.getElementById("hive");
+            const scoreDisplay = document.getElementById("current-score");
+            const toggleBtn = document.getElementById("toggle-words-btn");
+            const foundWordsContainer = document.getElementById(
+                "found-words-container",
+            );
+            const foundWordsList = document.getElementById("found-words-list");
+
+            // --- INITIALIZATION ---
+            function initGame() {
+                renderHive();
+            }
+
+            // --- UI RENDER LOGIC (Trigonometry for radial layout) ---
+            function renderHive() {
+                hiveContainer.innerHTML = "";
+
+                // Render Center Bubble
+                const centerBubble = document.createElement("div");
+                centerBubble.className = "bubble center";
+                centerBubble.innerText = puzzleCenterLetter;
+                centerBubble.onclick = () =>
+                    handleBubbleClick(puzzleCenterLetter);
+                hiveContainer.appendChild(centerBubble);
+
+                // Render Outer Bubbles
+                const radius = 100; // Match CSS variable
+                const angleStep = (2 * Math.PI) / puzzleOuterLetters.length; // 60 degrees
+
+                puzzleOuterLetters.forEach((letter, index) => {
+                    const angle = index * angleStep - Math.PI / 2; // Start at top (-90 deg)
+
+                    // Calculate X and Y relative to the center (50%)
+                    const x = 50 + (radius * Math.cos(angle)) / 1.5; // divided by 1.5 mapping px to % roughly
+                    const y = 50 + (radius * Math.sin(angle)) / 1.5;
+
+                    const bubble = document.createElement("div");
+                    bubble.className = "bubble";
+                    bubble.innerText = letter;
+                    bubble.style.left = `${x}%`;
+                    bubble.style.top = `${y}%`;
+                    bubble.onclick = () => handleBubbleClick(letter);
+
+                    hiveContainer.appendChild(bubble);
+                });
+            }
+
+            // --- INTERACTION LOGIC ---
+            function handleBubbleClick(letter) {
+                currentInput += letter;
+                updateInputDisplay();
+            }
+
+            function deleteLetter() {
+                document.getElementById("btn-delete").blur(); // Drop focus
+                currentInput = currentInput.slice(0, -1);
+                updateInputDisplay();
+            }
+
+            function shuffleLetters() {
+                document.getElementById("btn-shuffle").blur(); // Drop focus
+
+                // Fisher-Yates shuffle algorithm
+                for (let i = puzzleOuterLetters.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [puzzleOuterLetters[i], puzzleOuterLetters[j]] = [
+                        puzzleOuterLetters[j],
+                        puzzleOuterLetters[i],
+                    ];
+                }
+                renderHive(); // Redraw layout with new positions
+            }
+
+            function updateInputDisplay() {
+                // Style the center letter differently inside the input display
+                inputDisplay.innerHTML = "";
+                for (let char of currentInput) {
+                    const span = document.createElement("span");
+                    span.innerText = char;
+                    if (char === puzzleCenterLetter) {
+                        span.className = "center-letter-text";
+                    }
+                    inputDisplay.appendChild(span);
+                }
+            }
+
+            // --- VALIDATION & SCORING ---
+            function submitWord() {
+                document.getElementById("btn-submit").blur(); // Drop focus
+                const word = currentInput.toLowerCase();
+
+                if (word.length < 4) {
+                    alert("Word must be at least 4 letters.");
+                    return;
+                }
+
+                if (!word.includes(puzzleCenterLetter)) {
+                    alert("Word must contain the center letter.");
+                    return;
+                }
+
+                if (dictionary.has(word)) {
+                    processValidWord(word);
+                } else {
+                    alert("Not in word list.");
+                }
+
+                // Clear input after submit attempt
+                currentInput = "";
+                updateInputDisplay();
+            }
+
+            function processValidWord(word) {
+                if (foundWords.has(word)) {
+                    alert("Already found!");
+                    return;
+                }
+
+                foundWords.add(word);
+                const pointsEarned = calculateScore(word);
+                currentScore += pointsEarned;
+                scoreDisplay.innerText = currentScore;
+
+                // Add to hidden UI list
+                const listItem = document.createElement("li");
+                listItem.innerText = word;
+                foundWordsList.appendChild(listItem);
+            }
+
+            function calculateScore(word) {
+                let points = 0;
+
+                // Length points
+                if (word.length === 4) {
+                    points = 1;
+                } else if (word.length > 4) {
+                    points = word.length;
+                }
+
+                // Pangram Check (7 unique letters)
+                const uniqueLetters = new Set(word.split("")).size;
+                if (uniqueLetters === 7) {
+                    points += 7; // Pangram Bonus
+                    alert("PANGRAM! +7 Bonus Points!");
+                }
+
+                return points;
+            }
+
+            // --- TOGGLE WORDS BUTTON ---
+            toggleBtn.addEventListener("click", function () {
+                this.blur(); // Crucial: drops focus so Enter key doesn't toggle it again
+                foundWordsContainer.classList.toggle("hidden");
+
+                if (foundWordsContainer.classList.contains("hidden")) {
+                    this.innerText = "Show Found Words";
+                } else {
+                    this.innerText = "Hide Found Words";
+                }
+            });
+
+            // --- KEYBOARD LISTENER ---
+            document.addEventListener("keydown", (e) => {
+                const key = e.key.toLowerCase();
+                const allowedLetters = [
+                    ...puzzleOuterLetters,
+                    puzzleCenterLetter,
+                ];
+
+                if (allowedLetters.includes(key)) {
+                    handleBubbleClick(key);
+                } else if (key === "enter") {
+                    e.preventDefault(); // Stop browser from clicking focused buttons
+                    submitWord();
+                } else if (key === "backspace") {
+                    e.preventDefault(); // Stop browser from navigating back
+                    deleteLetter();
+                }
+            });
+
+            // Start game
+            initGame();
+        </script>
+    </body>
+</html>
