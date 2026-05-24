@@ -6,15 +6,25 @@
             name="viewport"
             content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
         />
-        <title>Bubble Word Splash</title>
+        <title>Bubble Splash</title>
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+        />
         <style>
             :root {
-                --bg-color: #0f172a;
-                --text-color: #f8fafc;
-                --bubble-outer: #3b82f6;
-                --bubble-center: #fbbf24;
-                --bubble-shadow: rgba(0, 0, 0, 0.4);
-                --radius: 100px; /* Radius of the orbit */
+                --bg-color: #061325;
+                --text-color: #e2e8f0;
+                --bubble-outer-base: rgba(30, 58, 138, 0.4);
+                --bubble-outer-glow: rgba(59, 130, 246, 0.5);
+                --bubble-center-base: rgba(192, 86, 33, 0.5);
+                --bubble-center-glow: rgba(
+                    255,
+                    127,
+                    80,
+                    0.6
+                ); /* Vibrant Coral */
+                --bubble-shadow: rgba(0, 0, 0, 0.3);
             }
 
             body {
@@ -25,20 +35,23 @@
                 font-family:
                     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
                     Helvetica, Arial, sans-serif;
-                overflow: hidden; /* App-like behavior, no page scrolling */
+                overflow: hidden;
                 display: flex;
                 flex-direction: column;
+                align-items: center;
                 height: 100vh;
             }
 
-            /* --- STATS & UI BAR --- */
-            .stats-bar {
+            /* --- TOP BAR --- */
+            .top-bar {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 padding: 15px 20px;
-                background-color: rgba(255, 255, 255, 0.05);
+                background-color: rgba(0, 0, 0, 0.2);
                 box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+                width: 100%;
+                box-sizing: border-box;
                 z-index: 10;
             }
 
@@ -47,187 +60,705 @@
                 font-weight: bold;
             }
 
-            #toggle-words-btn {
+            #modal-open-btn {
                 padding: 8px 16px;
-                background-color: #2563eb;
+                background-color: rgba(255, 255, 255, 0.1);
                 color: white;
-                border: none;
+                border: 1px solid rgba(255, 255, 255, 0.3);
                 border-radius: 20px;
                 font-weight: bold;
                 cursor: pointer;
-                box-shadow: 0 4px 6px var(--bubble-shadow);
+                transition: background-color 0.2s;
             }
 
-            #toggle-words-btn:active {
-                background-color: #1d4ed8;
+            #modal-open-btn:active {
+                background-color: rgba(255, 255, 255, 0.2);
             }
 
-            /* --- FOUND WORDS OVERLAY --- */
-            .found-words-section {
-                position: absolute;
-                top: 60px;
+            /* --- FOUND WORDS MODAL --- */
+            .modal-overlay {
+                position: fixed;
+                top: 0;
                 left: 0;
                 right: 0;
                 bottom: 0;
-                background-color: rgba(15, 23, 42, 0.95);
-                overflow-y: auto;
-                z-index: 5;
+                background-color: rgba(2, 12, 27, 0.98);
+                z-index: 100;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
                 padding: 20px;
+                box-sizing: border-box;
+                opacity: 1;
+                transition: opacity 0.3s;
             }
 
-            .hidden {
+            .modal-overlay.hidden {
                 display: none !important;
+                opacity: 0;
+            }
+
+            .modal-header {
+                position: relative;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin-bottom: 15px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                padding-bottom: 10px;
+                width: 100%;
+                max-width: 260px;
+            }
+
+            .modal-header h2 {
+                margin: 0;
+                font-size: 1.2rem;
+            }
+
+            #modal-close-btn {
+                position: absolute;
+                right: 0;
+                background: none;
+                border: none;
+                color: white;
+                font-size: 1.8rem;
+                cursor: pointer;
             }
 
             ul#found-words-list {
                 list-style-type: none;
                 padding: 0;
-                display: flex;
-                flex-wrap: wrap;
-                gap: 10px;
+                margin: 0 auto;
+                display: grid;
+                grid-template-columns: repeat(2, 110px);
+                gap: 2px 40px;
+                flex-grow: 1;
+                align-content: flex-start;
             }
 
             ul#found-words-list li {
-                background-color: rgba(255, 255, 255, 0.1);
-                padding: 8px 15px;
-                border-radius: 15px;
-                font-size: 1.1rem;
+                padding: 4px 0;
+                font-size: 0.9rem;
                 text-transform: capitalize;
-            }
-
-            /* --- INPUT DISPLAY --- */
-            .input-display-container {
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
                 text-align: center;
+            }
+
+            .pagination-controls {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding-top: 15px;
+                margin: 0 auto;
+                width: 100%;
+                max-width: 260px;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .pagination-btn {
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                color: white;
+                padding: 6px 15px;
+                border-radius: 15px;
+                cursor: pointer;
+            }
+
+            .pagination-btn:disabled {
+                opacity: 0.3;
+                cursor: default;
+            }
+
+            /* --- NOTIFICATION ZONE --- */
+            .notification-zone {
+                height: 30px;
                 margin-top: 30px;
-                height: 40px;
-            }
-
-            .input-display {
-                font-size: 2rem;
+                margin-bottom: 60px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
                 font-weight: bold;
-                letter-spacing: 2px;
-                text-transform: uppercase;
+                font-size: 1.1rem;
+                letter-spacing: 0.5px;
+                opacity: 0;
+                transition: opacity 0.2s ease-in-out;
+                color: #fff;
             }
 
-            .center-letter-text {
-                color: var(--bubble-center);
+            .notification-zone.show {
+                opacity: 1;
+            }
+
+            /* --- LOADING OVERLAY --- */
+            #loading-state {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 1.2rem;
+                font-weight: bold;
+                color: var(--bubble-outer-glow);
+                z-index: 50;
+                text-align: center;
+                width: 80%;
             }
 
             /* --- RADIAL BUBBLE HIVE --- */
             .hive-container {
                 position: relative;
-                width: 300px;
-                height: 300px;
-                margin: 40px auto;
+                width: 220px;
+                height: 220px;
+                margin: 60px auto;
+                visibility: hidden; /* Hidden until dictionary loads */
+                transition: transform 0.1s ease;
+            }
+
+            .bubble-wrapper {
+                position: absolute;
+                transform: translate(-50%, -50%);
+                transition:
+                    top 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+                    left 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+                z-index: 1;
+            }
+
+            .bubble-wrapper.center-wrapper {
+                z-index: 3;
+            }
+
+            /* --- OUTER RING SWIRL CONTAINER --- */
+            .outer-ring {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+            }
+
+            .outer-ring.swirling {
+                animation: ring-swirl 1s cubic-bezier(0.25, 1, 0.5, 1) both;
+            }
+
+            @keyframes ring-swirl {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            .bubble-bobber {
+                animation: float-bob 6s ease-in-out infinite;
+                animation-delay: var(--bob-delay, 0s);
+                display: flex;
+                justify-content: center;
+                align-items: center;
             }
 
             .bubble {
-                position: absolute;
-                width: 80px;
-                height: 80px;
+                position: relative;
+                width: 130px;
+                height: 130px;
                 border-radius: 50%;
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                font-size: 2rem;
+                font-size: 3rem;
                 font-weight: bold;
                 text-transform: uppercase;
                 cursor: pointer;
                 user-select: none;
                 color: white;
-                /* Water aesthetic via radial gradient */
                 background:
                     radial-gradient(
                         circle at 30% 30%,
-                        rgba(255, 255, 255, 0.8),
+                        rgba(255, 255, 255, 0.7),
                         transparent 40%
                     ),
                     radial-gradient(
                         circle,
-                        var(--bubble-outer) 0%,
-                        #1e3a8a 100%
+                        var(--bubble-outer-glow) 0%,
+                        var(--bubble-outer-base) 100%
                     );
                 box-shadow:
-                    0 10px 15px var(--bubble-shadow),
-                    inset -5px -5px 15px rgba(0, 0, 0, 0.3);
-                transition:
-                    transform 0.1s,
-                    top 0.3s,
-                    left 0.3s;
-                /* Center the bubble around its top/left origin */
-                transform: translate(-50%, -50%);
+                    0 8px 20px var(--bubble-shadow),
+                    inset -4px -4px 10px rgba(0, 0, 0, 0.1),
+                    inset 4px 4px 15px rgba(255, 255, 255, 0.3);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                border: 1px solid rgba(255, 255, 255, 0.4);
+                transition: transform 0.15s
+                    cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                animation: entry-spring 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)
+                    both;
+                animation-delay: var(--entry-delay, 0s);
             }
 
             .bubble:active {
-                transform: translate(-50%, -50%) scale(0.9);
+                transform: scale(0.9);
             }
 
             .bubble.center {
-                top: 50%;
-                left: 50%;
                 background:
                     radial-gradient(
                         circle at 30% 30%,
-                        rgba(255, 255, 255, 0.8),
+                        rgba(255, 255, 255, 0.7),
                         transparent 40%
                     ),
                     radial-gradient(
                         circle,
-                        var(--bubble-center) 0%,
-                        #b45309 100%
+                        var(--bubble-center-glow) 0%,
+                        var(--bubble-center-base) 100%
                     );
-                color: #451a03;
-                z-index: 2;
+                color: #fff;
+            }
+
+            /* --- CLICK RIPPLES --- */
+            .click-ripple {
+                position: absolute;
+                border-radius: 50%;
+                border: 2px solid rgba(255, 255, 255, 0.6);
+                background: transparent;
+                pointer-events: none;
+                width: 100%;
+                height: 100%;
+                top: 0;
+                left: 0;
+                box-sizing: border-box;
+                animation: bubble-ripple 0.4s cubic-bezier(0.1, 0.8, 0.3, 1)
+                    forwards;
+            }
+
+            @keyframes bubble-ripple {
+                0% {
+                    transform: scale(0.8);
+                    opacity: 1;
+                }
+                100% {
+                    transform: scale(1.6);
+                    opacity: 0;
+                }
+            }
+
+            /* --- FEEDBACK ANIMATIONS (SHAKE/FLASH) --- */
+            .shake {
+                animation: shake-wobble 0.4s ease-in-out;
+            }
+
+            @keyframes shake-wobble {
+                0%,
+                100% {
+                    transform: translateX(0);
+                }
+                15% {
+                    transform: translateX(-8px);
+                }
+                30% {
+                    transform: translateX(6px);
+                }
+                45% {
+                    transform: translateX(-6px);
+                }
+                60% {
+                    transform: translateX(4px);
+                }
+                75% {
+                    transform: translateX(-2px);
+                }
+            }
+
+            .error-flash {
+                animation: error-flash-glow 0.4s ease-in-out;
+            }
+
+            @keyframes error-flash-glow {
+                0%,
+                100% {
+                    color: var(--text-color);
+                    text-shadow: none;
+                }
+                50% {
+                    color: #ef4444;
+                    text-shadow: 0 0 12px rgba(239, 68, 68, 0.8);
+                }
+            }
+
+            /* --- PARTICLES SYSTEM --- */
+            .particle {
+                position: absolute;
+                border-radius: 50%;
+                pointer-events: none;
+                opacity: 0;
+                box-shadow:
+                    inset -2px -2px 6px rgba(0, 0, 0, 0.05),
+                    inset 2px 2px 8px rgba(255, 255, 255, 0.4);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+            }
+
+            .particle.blue-bubble {
+                background: radial-gradient(
+                    circle at 30% 30%,
+                    rgba(255, 255, 255, 0.8),
+                    rgba(147, 197, 253, 0.4) 40%,
+                    rgba(59, 130, 246, 0.2) 100%
+                );
+                border-color: rgba(147, 197, 253, 0.5);
+            }
+
+            .particle.pangram-coral {
+                background: radial-gradient(
+                    circle at 30% 30%,
+                    rgba(255, 255, 255, 0.8),
+                    rgba(254, 186, 150, 0.5) 40%,
+                    rgba(255, 127, 80, 0.3) 100%
+                );
+                border-color: rgba(254, 186, 150, 0.6);
+            }
+
+            .particle.pangram-gold {
+                background: radial-gradient(
+                    circle at 30% 30%,
+                    rgba(255, 255, 255, 0.8),
+                    rgba(252, 211, 77, 0.5) 40%,
+                    rgba(245, 158, 11, 0.3) 100%
+                );
+                border-color: rgba(252, 211, 77, 0.6);
+            }
+
+            /* Fullscreen Ripple overlay for Pangrams */
+            .pangram-ripple-overlay {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: radial-gradient(
+                    circle,
+                    rgba(255, 127, 80, 0.2) 0%,
+                    transparent 70%
+                );
+                border: 4px solid rgba(255, 127, 80, 0.4);
+                pointer-events: none;
+                z-index: 99;
+                animation: pangram-ripple 0.8s cubic-bezier(0.1, 0.8, 0.3, 1)
+                    forwards;
+            }
+
+            @keyframes pangram-ripple {
+                0% {
+                    width: 50px;
+                    height: 50px;
+                    opacity: 1;
+                    border-width: 8px;
+                }
+                100% {
+                    width: 1200px;
+                    height: 1200px;
+                    opacity: 0;
+                    border-width: 1px;
+                }
+            }
+
+            /* --- KEYFRAMES --- */
+            @keyframes entry-spring {
+                0% {
+                    transform: scale(0);
+                    opacity: 0;
+                }
+                100% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+            }
+
+            @keyframes float-bob {
+                0% {
+                    transform: translateY(0px) scale(1);
+                }
+                50% {
+                    transform: translateY(-6px) scale(1.02);
+                }
+                100% {
+                    transform: translateY(0px) scale(1);
+                }
+            }
+
+            /* --- INPUT DISPLAY --- */
+            .input-display-container {
+                text-align: center;
+                margin-top: 60px;
+                min-height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: transform 0.1s ease;
+            }
+
+            .input-display {
+                font-size: 2rem;
+                font-weight: bold;
+                letter-spacing: 3px;
+                text-transform: uppercase;
+                transition: color 0.1s ease;
+            }
+
+            .center-letter-text {
+                color: var(--bubble-center-glow);
+            }
+            /* --- RANK BUBBLES --- */
+            .rank-bubbles-container {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                width: 100%;
+                padding: 10px 15px;
+                box-sizing: border-box;
+                gap: 15px;
+                overflow-x: auto;
+                scrollbar-width: none; /* Firefox */
+            }
+            .rank-bubbles-container::-webkit-scrollbar {
+                display: none; /* Chrome/Safari */
+            }
+
+            .active-rank-display {
+                font-size: 1.1rem;
+                font-weight: 800;
+                color: var(--bubble-center-glow);
+                text-shadow: 0 0 10px rgba(255, 127, 80, 0.5);
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                flex-shrink: 0;
+                animation: rank-text-slide 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+            }
+
+            @keyframes rank-text-slide {
+                0% {
+                    transform: translateX(-15px);
+                    opacity: 0;
+                }
+                100% {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+
+            .milestone-bubbles-list {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 10px;
+                flex-shrink: 0;
+            }
+
+            .rank-milestone-wrapper {
+                display: grid;
+                grid-template-areas: "content";
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                position: relative;
+            }
+
+            .rank-bubble {
+                grid-area: content;
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 0.8rem;
+                font-weight: bold;
+                color: rgba(255, 255, 255, 0.7);
+                position: relative;
+                flex-shrink: 0;
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+                /* Standard Glassmorphic Bubble styling */
+                background:
+                    radial-gradient(
+                        circle at 30% 30%,
+                        rgba(255, 255, 255, 0.25),
+                        transparent 45%
+                    ),
+                    radial-gradient(
+                        circle,
+                        rgba(59, 130, 246, 0.15) 0%,
+                        rgba(30, 58, 138, 0.1) 100%
+                    );
+                border: 1px solid rgba(59, 130, 246, 0.3);
+                box-shadow: 
+                    0 4px 8px rgba(0, 0, 0, 0.15),
+                    inset -1px -1px 3px rgba(0, 0, 0, 0.1),
+                    inset 1px 1px 4px rgba(255, 255, 255, 0.2);
+            }
+
+            .rank-milestone-wrapper.reached .rank-bubble {
+                animation: bubble-pop-vanish 0.4s cubic-bezier(0.3, 1.5, 0.6, 1) both;
+                pointer-events: none;
+            }
+
+            .rank-bubble.next-milestone {
+                color: white;
+                background:
+                    radial-gradient(
+                        circle at 30% 30%,
+                        rgba(255, 255, 255, 0.75),
+                        transparent 45%
+                    ),
+                    radial-gradient(
+                        circle,
+                        var(--bubble-outer-glow) 0%,
+                        rgba(30, 58, 138, 0.6) 100%
+                    );
+                border-color: var(--bubble-outer-glow);
+                box-shadow: 
+                    0 0 12px var(--bubble-outer-glow),
+                    inset -2px -2px 5px rgba(0, 0, 0, 0.2),
+                    inset 2px 2px 8px rgba(255, 255, 255, 0.4);
+                transform: scale(1.15);
+            }
+
+            .rank-label {
+                grid-area: content;
+                display: none;
+                font-size: 0.75rem;
+                font-weight: bold;
+                color: var(--bubble-center-glow);
+                text-shadow: 0 0 6px rgba(255, 127, 80, 0.4);
+                text-transform: capitalize;
+                letter-spacing: 0.5px;
+                text-align: center;
+                white-space: nowrap;
+            }
+
+            .rank-milestone-wrapper.reached .rank-label {
+                display: block;
+                animation: text-appear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+                animation-delay: 0.25s; /* Staggered pop and reveal */
+            }
+
+            @keyframes bubble-pop-vanish {
+                0% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+                40% {
+                    transform: scale(1.3);
+                    opacity: 0.8;
+                }
+                100% {
+                    transform: scale(0);
+                    opacity: 0;
+                }
+            }
+
+            @keyframes text-appear {
+                0% {
+                    transform: scale(0);
+                    opacity: 0;
+                }
+                100% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
             }
 
             /* --- CONTROLS --- */
             .controls {
                 display: flex;
                 justify-content: center;
-                gap: 15px;
-                margin-top: auto;
-                margin-bottom: 40px;
+                gap: 12px;
+                margin-top: 30px;
+                visibility: hidden; /* Hidden until dictionary loads */
             }
 
             .btn {
-                padding: 15px 25px;
-                border-radius: 30px;
-                border: none;
-                font-size: 1rem;
+                padding: 12px 20px;
+                border-radius: 25px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                font-size: 0.9rem;
                 font-weight: bold;
                 text-transform: uppercase;
                 cursor: pointer;
-                background-color: rgba(255, 255, 255, 0.1);
+                background-color: rgba(255, 255, 255, 0.05);
                 color: white;
                 box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
             }
 
             .btn:active {
-                background-color: rgba(255, 255, 255, 0.2);
+                background-color: rgba(255, 255, 255, 0.15);
             }
         </style>
     </head>
     <body>
-        <div class="stats-bar">
+        <div
+            id="particle-container"
+            style="
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+                overflow: hidden;
+                z-index: 999;
+            "
+        ></div>
+        <div class="top-bar">
             <div class="score-display">
-                Score: <span id="current-score">0</span>
+                Bubble Splash
             </div>
-            <button type="button" id="toggle-words-btn">
-                Show Found Words
-            </button>
+            <button type="button" id="modal-open-btn">Found Words</button>
         </div>
 
-        <div class="found-words-section hidden" id="found-words-container">
-            <ul id="found-words-list"></ul>
+        <div class="rank-bubbles-container" id="rank-bubbles">
+            <div id="active-rank-display" class="active-rank-display">Plankton</div>
+            <div id="milestone-bubbles-list" class="milestone-bubbles-list"></div>
         </div>
+
+        <div class="modal-overlay hidden" id="words-modal">
+            <div class="modal-header">
+                <h2>Words Found (<span id="modal-word-count">0</span>)</h2>
+                <button type="button" id="modal-close-btn">&times;</button>
+            </div>
+            <ul id="found-words-list"></ul>
+            <div class="pagination-controls">
+                <button
+                    class="pagination-btn"
+                    id="prev-page"
+                    onclick="changePage(-1)"
+                >
+                    Prev
+                </button>
+                <span id="page-info">Page 1 of 1</span>
+                <button
+                    class="pagination-btn"
+                    id="next-page"
+                    onclick="changePage(1)"
+                >
+                    Next
+                </button>
+            </div>
+        </div>
+
+        <div id="notification-zone" class="notification-zone"></div>
+
+        <div id="loading-state">Loading Dictionary...</div>
+
+        <div class="hive-container" id="hive"></div>
 
         <div class="input-display-container">
             <div class="input-display" id="input-display"></div>
         </div>
 
-        <div class="hive-container" id="hive"></div>
-
-        <div class="controls">
+        <div class="controls" id="controls">
             <button
                 type="button"
                 class="btn"
@@ -242,7 +773,7 @@
                 id="btn-shuffle"
                 onclick="shuffleLetters()"
             >
-                Shuffle
+                <i class="fas fa-arrows-spin"></i>
             </button>
             <button
                 type="button"
@@ -256,123 +787,464 @@
 
         <script>
             // --- GAME DATA ---
-            // Replace this with your 18,983+ word array!
-            const FULL_DICTIONARY = [
-                "machine",
-                "mice",
-                "mince",
-                "name",
-                "nice",
-                "niche",
-                "niece",
-                "cane",
-                "chain",
-                "chime",
-                "chin",
-                "china",
-                "cinema",
-                "each",
-                "echo",
-                "hemic",
-                "inch",
-                "mach",
-                "mache",
-                "manic",
-                "mechanic",
-                "mica",
-            ];
+            let dictionary = new Set();
+            let currentPuzzle = {};
 
-            const dictionary = new Set(FULL_DICTIONARY);
-            const puzzleCenterLetter = "c";
-            let puzzleOuterLetters = ["m", "a", "h", "i", "n", "e"];
+            let excludedPangrams = [];
 
             // --- STATE ---
             let currentInput = "";
             let currentScore = 0;
             let foundWords = new Set();
+            let foundWordsPage = 0;
+            let notificationTimeout;
+
+            const RANKS = [
+                { name: "Plankton", threshold: 0 },
+                { name: "Minnow", threshold: 0.02 },
+                { name: "Seahorse", threshold: 0.05 },
+                { name: "Clownfish", threshold: 0.08 },
+                { name: "Sea Turtle", threshold: 0.15 },
+                { name: "Dolphin", threshold: 0.25 },
+                { name: "Barracuda", threshold: 0.4 },
+                { name: "Great White", threshold: 0.5 },
+                { name: "Blue Whale", threshold: 0.7 },
+                { name: "Kraken", threshold: 1.0 },
+            ];
 
             // --- DOM ELEMENTS ---
             const inputDisplay = document.getElementById("input-display");
             const hiveContainer = document.getElementById("hive");
+            const controlsContainer = document.getElementById("controls");
+            const loadingState = document.getElementById("loading-state");
             const scoreDisplay = document.getElementById("current-score");
-            const toggleBtn = document.getElementById("toggle-words-btn");
-            const foundWordsContainer = document.getElementById(
-                "found-words-container",
-            );
-            const foundWordsList = document.getElementById("found-words-list");
+            const rankDisplay = document.getElementById("current-rank");
+            const rankBubblesContainer =
+                document.getElementById("rank-bubbles");
+            const notificationZone =
+                document.getElementById("notification-zone");
 
-            // --- INITIALIZATION ---
+            // Modal Elements
+            const wordsModal = document.getElementById("words-modal");
+            const modalOpenBtn = document.getElementById("modal-open-btn");
+            const modalCloseBtn = document.getElementById("modal-close-btn");
+            const foundWordsList = document.getElementById("found-words-list");
+            const modalWordCount = document.getElementById("modal-word-count");
+            const pageInfo = document.getElementById("page-info");
+            const prevPageBtn = document.getElementById("prev-page");
+            const nextPageBtn = document.getElementById("next-page");
+
+            const successWords = [
+                {
+                    min: 4,
+                    max: 4,
+                    vals: ["Good", "Nice", "Okay"],
+                },
+                {
+                    min: 5,
+                    max: 7,
+                    vals: ["Great", "Very Nice", "Excellent"],
+                },
+                {
+                    min: 8,
+                    max: 12,
+                    vals: ["Fantastic!", "Genius!", "Awesome!"],
+                },
+                {
+                    min: 13,
+                    max: Infinity,
+                    vals: ["Unbelievable!!", "Stupendous!!", "Incredible!!"],
+                },
+            ];
+
+            // --- INITIALIZATION & FETCH LOGIC ---
             function initGame() {
-                renderHive();
+                fetch("dictionary.json")
+                    .then((response) => {
+                        if (!response.ok)
+                            throw new Error("Network response was not ok");
+                        return response.json();
+                    })
+                    .then((data) => {
+                        let wordList = [];
+                        // Handle both Array format and Object (Key-based) format
+                        if (Array.isArray(data)) {
+                            wordList = data;
+                        } else {
+                            wordList = Object.keys(data);
+                        }
+
+                        // Filter out short words
+                        wordList = wordList.filter((word) => word.length >= 4);
+                        dictionary = new Set(wordList);
+
+                        // Generate dynamic puzzle from the dictionary
+                        while (true) {
+                            if (generatePuzzle(wordList)) break;
+                        }
+
+                        // Reveal UI
+                        loadingState.style.display = "none";
+                        hiveContainer.style.visibility = "visible";
+                        controlsContainer.style.visibility = "visible";
+
+                        renderHive();
+                    })
+                    .catch((error) => {
+                        console.error("Error fetching dictionary:", error);
+                        loadingState.innerText =
+                            "Error loading dictionary.json. Are you running a local server?";
+                        loadingState.style.color = "#ef4444";
+                    });
             }
 
-            // --- UI RENDER LOGIC (Trigonometry for radial layout) ---
+            // --- PUZZLE GENERATION ---
+            function generatePuzzle(wordList) {
+                // Find all words that have exactly 7 unique letters
+                let pangrams = wordList.filter(
+                    (word) => new Set(word.split("")).size === 7,
+                );
+
+                pangrams = pangrams.filter(
+                    (x) => !excludedPangrams.includes(x),
+                );
+
+                if (pangrams.length === 0) {
+                    showNotification(
+                        "Error: No 7-letter pangrams found in dictionary!",
+                    );
+                    return;
+                }
+
+                // Pick a random pangram from the list
+                const randomPangram =
+                    pangrams[Math.floor(Math.random() * pangrams.length)];
+
+                // Extract the 7 unique letters
+                let uniqueLetters = Array.from(
+                    new Set(randomPangram.split("")),
+                );
+
+                // Shuffle the 7 letters randomly
+                for (let i = uniqueLetters.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [uniqueLetters[i], uniqueLetters[j]] = [
+                        uniqueLetters[j],
+                        uniqueLetters[i],
+                    ];
+                }
+
+                const validAnswers = wordList.filter((word) => {
+                    if (!word.includes(uniqueLetters[0])) return false;
+                    for (let char of word) {
+                        if (!uniqueLetters.includes(char)) return false;
+                    }
+                    return true;
+                });
+
+                if (validAnswers.length > 85) {
+                    excludedPangrams.push(randomPangram);
+                    return false;
+                }
+
+                let totalPossibleScore = 0;
+                validAnswers.forEach((word) => {
+                    totalPossibleScore += calculatePoints(word);
+                });
+
+                currentPuzzle = {
+                    centerLetter: uniqueLetters[0],
+                    outerLetters: uniqueLetters.slice(1),
+                    allLetters: uniqueLetters,
+                    validAnswers: new Set(validAnswers),
+                    totalPossibleScore: totalPossibleScore,
+                };
+
+                renderRankBubbles();
+                foundWordsPage = 0;
+                foundWords = new Set();
+                renderFoundWords();
+                return true;
+            }
+
+            function renderRankBubbles() {
+                const bubblesList = document.getElementById("milestone-bubbles-list");
+                if (bubblesList) {
+                    bubblesList.innerHTML = "";
+
+                    // Remove the top tier (the last element of RANKS) from the rendered milestones list
+                    const milestones = RANKS.slice(0, -1);
+
+                    milestones.forEach((rank, index) => {
+                        const wrapper = document.createElement("div");
+                        wrapper.className = "rank-milestone-wrapper";
+
+                        const bubble = document.createElement("div");
+                        bubble.className = "rank-bubble";
+                        bubble.id = `rank-bubble-${index}`;
+
+                        const label = document.createElement("div");
+                        label.className = "rank-label";
+                        label.innerText = rank.name;
+
+                        wrapper.appendChild(bubble);
+                        wrapper.appendChild(label);
+                        bubblesList.appendChild(wrapper);
+                    });
+                }
+                updateRank();
+            }
+
+            function calculatePoints(word) {
+                let p = 0;
+                if (word.length === 4) {
+                    p = 1;
+                } else if (word.length > 4) {
+                    p = word.length;
+                }
+                const uniqueLetters = new Set(word.split("")).size;
+                if (uniqueLetters === 7) {
+                    p += 7;
+                }
+                return p;
+            }
+
+            // --- NOTIFICATION LOGIC ---
+            function showNotification(msg) {
+                clearTimeout(notificationTimeout);
+                notificationZone.innerText = msg;
+                notificationZone.classList.add("show");
+
+                notificationTimeout = setTimeout(() => {
+                    notificationZone.classList.remove("show");
+                }, 2000);
+            }
+
+            // --- UI RENDER LOGIC ---
+            // Global array to store outer coordinates
+            let outerPositions = [];
+
             function renderHive() {
                 hiveContainer.innerHTML = "";
 
-                // Render Center Bubble
+                // Center Bubble
+                const centerWrapper = document.createElement("div");
+                centerWrapper.className = "bubble-wrapper center-wrapper";
+                centerWrapper.style.left = "50%";
+                centerWrapper.style.top = "50%";
+
+                const centerBobber = document.createElement("div");
+                centerBobber.className = "bubble-bobber";
+                centerBobber.style.setProperty("--bob-delay", "0s");
+
                 const centerBubble = document.createElement("div");
                 centerBubble.className = "bubble center";
-                centerBubble.innerText = puzzleCenterLetter;
-                centerBubble.onclick = () =>
-                    handleBubbleClick(puzzleCenterLetter);
-                hiveContainer.appendChild(centerBubble);
+                centerBubble.innerText = currentPuzzle.centerLetter;
+                centerBubble.style.setProperty("--entry-delay", "0s");
+                centerBubble.onclick = (e) =>
+                    handleBubbleClick(
+                        currentPuzzle.centerLetter,
+                        e.currentTarget,
+                    );
 
-                // Render Outer Bubbles
-                const radius = 100; // Match CSS variable
-                const angleStep = (2 * Math.PI) / puzzleOuterLetters.length; // 60 degrees
+                centerBobber.appendChild(centerBubble);
+                centerWrapper.appendChild(centerBobber);
+                hiveContainer.appendChild(centerWrapper);
 
-                puzzleOuterLetters.forEach((letter, index) => {
-                    const angle = index * angleStep - Math.PI / 2; // Start at top (-90 deg)
+                // Create Outer Ring Container
+                const outerRing = document.createElement("div");
+                outerRing.id = "outer-ring";
+                outerRing.className = "outer-ring";
+                hiveContainer.appendChild(outerRing);
 
-                    // Calculate X and Y relative to the center (50%)
-                    const x = 50 + (radius * Math.cos(angle)) / 1.5; // divided by 1.5 mapping px to % roughly
-                    const y = 50 + (radius * Math.sin(angle)) / 1.5;
+                const radius = 75;
+                const angleStep =
+                    (2 * Math.PI) / currentPuzzle.outerLetters.length;
+                outerPositions = [];
+
+                currentPuzzle.outerLetters.forEach((letter, index) => {
+                    const angle = index * angleStep - Math.PI / 2;
+                    const x = 50 + ((radius * Math.cos(angle)) / 110) * 100;
+                    const y = 50 + ((radius * Math.sin(angle)) / 110) * 100;
+                    outerPositions.push({ x, y });
+
+                    const wrapper = document.createElement("div");
+                    wrapper.className = "bubble-wrapper outer-bubble-wrapper";
+                    wrapper.style.left = `${x}%`;
+                    wrapper.style.top = `${y}%`;
+                    wrapper.style.pointerEvents = "auto";
+
+                    const bobber = document.createElement("div");
+                    bobber.className = "bubble-bobber";
+                    bobber.style.setProperty("--bob-delay", `${index * 0.4}s`);
 
                     const bubble = document.createElement("div");
                     bubble.className = "bubble";
                     bubble.innerText = letter;
-                    bubble.style.left = `${x}%`;
-                    bubble.style.top = `${y}%`;
-                    bubble.onclick = () => handleBubbleClick(letter);
+                    bubble.style.setProperty(
+                        "--entry-delay",
+                        `${(index + 1) * 0.05}s`,
+                    );
+                    bubble.onclick = (e) =>
+                        handleBubbleClick(letter, e.currentTarget);
 
-                    hiveContainer.appendChild(bubble);
+                    bobber.appendChild(bubble);
+                    wrapper.appendChild(bobber);
+                    outerRing.appendChild(wrapper);
                 });
             }
 
+            // --- ANIMATION UTILITIES & PARTICLES ---
+            function getHiveCenterCoordinates() {
+                const rect = hiveContainer.getBoundingClientRect();
+                return {
+                    x: rect.left + rect.width / 2 + window.scrollX,
+                    y: rect.top + rect.height / 2 + window.scrollY,
+                };
+            }
+
+            function spawnParticles(x, y, count, type = "blue-bubble") {
+                const container = document.getElementById("particle-container");
+                if (!container) return;
+
+                for (let i = 0; i < count; i++) {
+                    const particle = document.createElement("div");
+                    particle.className = `particle ${type}`;
+
+                    // Random size between 12px and 36px
+                    const size = Math.random() * 24 + 12;
+                    particle.style.width = `${size}px`;
+                    particle.style.height = `${size}px`;
+
+                    // Initial position at center of splash
+                    particle.style.left = `${x - size / 2}px`;
+                    particle.style.top = `${y - size / 2}px`;
+                    particle.style.opacity = "1";
+                    particle.style.transform = "scale(1)";
+
+                    container.appendChild(particle);
+
+                    // Generate random target coordinates
+                    const angle = Math.random() * 2 * Math.PI;
+                    const distance = Math.random() * 140 + 40; // drift distance
+                    const tx = Math.cos(angle) * distance;
+                    const ty = Math.sin(angle) * distance - 80; // bias upwards
+
+                    const duration = Math.random() * 0.8 + 0.6; // 0.6s to 1.4s
+
+                    particle.style.transition = `transform ${duration}s cubic-bezier(0.1, 0.8, 0.2, 1), opacity ${duration}s ease-out`;
+
+                    // Trigger the animation on the next animation frame
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            particle.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(0)`;
+                            particle.style.opacity = "0";
+                        });
+                    });
+
+                    // Cleanup after animation completes
+                    setTimeout(
+                        () => {
+                            particle.remove();
+                        },
+                        duration * 1000 + 100,
+                    );
+                }
+            }
+
+            function spawnPangramRipple() {
+                const overlay = document.createElement("div");
+                overlay.className = "pangram-ripple-overlay";
+                document.body.appendChild(overlay);
+                setTimeout(() => overlay.remove(), 800);
+            }
+
+            function triggerErrorFeedback() {
+                const inputContainer = document.querySelector(
+                    ".input-display-container",
+                );
+                if (inputContainer) {
+                    inputContainer.classList.add("shake");
+                    inputDisplay.classList.add("error-flash");
+                }
+                hiveContainer.classList.add("shake");
+
+                setTimeout(() => {
+                    if (inputContainer) {
+                        inputContainer.classList.remove("shake");
+                        inputDisplay.classList.remove("error-flash");
+                    }
+                    hiveContainer.classList.remove("shake");
+                }, 400);
+            }
+
             // --- INTERACTION LOGIC ---
-            function handleBubbleClick(letter) {
+            function handleBubbleClick(letter, bubbleElement) {
                 currentInput += letter;
                 updateInputDisplay();
+
+                // Trigger click ripple animation
+                if (bubbleElement) {
+                    const ripple = document.createElement("div");
+                    ripple.className = "click-ripple";
+                    bubbleElement.appendChild(ripple);
+                    setTimeout(() => ripple.remove(), 400);
+
+                    // Add scale feedback temporarily (e.g. for keyboard click)
+                    bubbleElement.style.transform = "scale(0.90)";
+                    setTimeout(() => {
+                        bubbleElement.style.transform = "";
+                    }, 100);
+                }
             }
 
             function deleteLetter() {
-                document.getElementById("btn-delete").blur(); // Drop focus
+                document.getElementById("btn-delete").blur();
                 currentInput = currentInput.slice(0, -1);
                 updateInputDisplay();
             }
 
             function shuffleLetters() {
-                document.getElementById("btn-shuffle").blur(); // Drop focus
+                document.getElementById("btn-shuffle").blur();
 
-                // Fisher-Yates shuffle algorithm
-                for (let i = puzzleOuterLetters.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [puzzleOuterLetters[i], puzzleOuterLetters[j]] = [
-                        puzzleOuterLetters[j],
-                        puzzleOuterLetters[i],
-                    ];
+                const outerRing = document.getElementById("outer-ring");
+                if (outerRing) {
+                    // Trigger rotation swirl animation around the stationary center
+                    outerRing.classList.remove("swirling");
+                    void outerRing.offsetWidth; // Force CSS reflow to restart animation
+                    outerRing.classList.add("swirling");
+                    setTimeout(
+                        () => outerRing.classList.remove("swirling"),
+                        1000,
+                    );
                 }
-                renderHive(); // Redraw layout with new positions
+
+                // Randomize positions of the 6 outer bubbles
+                const indices = [0, 1, 2, 3, 4, 5];
+                for (let i = indices.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [indices[i], indices[j]] = [indices[j], indices[i]];
+                }
+
+                // Shift coordinates smoothly using CSS transitions
+                const wrappers = document.querySelectorAll(
+                    ".outer-bubble-wrapper",
+                );
+                wrappers.forEach((wrapper, index) => {
+                    const newPosIndex = indices[index];
+                    const pos = outerPositions[newPosIndex];
+
+                    wrapper.style.left = `${pos.x}%`;
+                    wrapper.style.top = `${pos.y}%`;
+                });
             }
 
             function updateInputDisplay() {
-                // Style the center letter differently inside the input display
                 inputDisplay.innerHTML = "";
                 for (let char of currentInput) {
                     const span = document.createElement("span");
                     span.innerText = char;
-                    if (char === puzzleCenterLetter) {
+                    if (char === currentPuzzle.centerLetter) {
                         span.className = "center-letter-text";
                     }
                     inputDisplay.appendChild(span);
@@ -381,94 +1253,233 @@
 
             // --- VALIDATION & SCORING ---
             function submitWord() {
-                document.getElementById("btn-submit").blur(); // Drop focus
+                document.getElementById("btn-submit").blur();
                 const word = currentInput.toLowerCase();
 
                 if (word.length < 4) {
-                    alert("Word must be at least 4 letters.");
-                    return;
-                }
-
-                if (!word.includes(puzzleCenterLetter)) {
-                    alert("Word must contain the center letter.");
-                    return;
-                }
-
-                if (dictionary.has(word)) {
-                    processValidWord(word);
+                    showNotification("Too short");
+                    triggerErrorFeedback();
+                } else if (!word.includes(currentPuzzle.centerLetter)) {
+                    showNotification("Missing center letter");
+                    triggerErrorFeedback();
+                } else if (foundWords.has(word)) {
+                    showNotification("Already found");
+                    triggerErrorFeedback();
+                } else if (!currentPuzzle.validAnswers.has(word)) {
+                    showNotification("Not in word list");
+                    triggerErrorFeedback();
                 } else {
-                    alert("Not in word list.");
+                    processValidWord(word);
                 }
 
-                // Clear input after submit attempt
                 currentInput = "";
                 updateInputDisplay();
             }
 
             function processValidWord(word) {
-                if (foundWords.has(word)) {
-                    alert("Already found!");
-                    return;
-                }
-
                 foundWords.add(word);
-                const pointsEarned = calculateScore(word);
-                currentScore += pointsEarned;
-                scoreDisplay.innerText = currentScore;
 
-                // Add to hidden UI list
-                const listItem = document.createElement("li");
-                listItem.innerText = word;
-                foundWordsList.appendChild(listItem);
-            }
-
-            function calculateScore(word) {
-                let points = 0;
-
-                // Length points
-                if (word.length === 4) {
-                    points = 1;
-                } else if (word.length > 4) {
-                    points = word.length;
-                }
-
-                // Pangram Check (7 unique letters)
+                const points = calculatePoints(word);
                 const uniqueLetters = new Set(word.split("")).size;
-                if (uniqueLetters === 7) {
-                    points += 7; // Pangram Bonus
-                    alert("PANGRAM! +7 Bonus Points!");
+
+                let displayMsg = "Nice"; // Default fallback
+                const matchingCategory = successWords.find(
+                    (cat) => word.length >= cat.min && word.length <= cat.max,
+                );
+
+                if (matchingCategory) {
+                    const randomIndex = Math.floor(
+                        Math.random() * matchingCategory.vals.length,
+                    );
+                    displayMsg = matchingCategory.vals[randomIndex];
                 }
 
-                return points;
+                const center = getHiveCenterCoordinates();
+                if (uniqueLetters === 7) {
+                    displayMsg = "Pangram!";
+                    // Massive Mixed Celebration Splash
+                    spawnPangramRipple();
+                    spawnParticles(center.x, center.y, 25, "pangram-gold");
+                    setTimeout(
+                        () =>
+                            spawnParticles(
+                                center.x,
+                                center.y,
+                                20,
+                                "pangram-coral",
+                            ),
+                        150,
+                    );
+                    setTimeout(
+                        () =>
+                            spawnParticles(
+                                center.x,
+                                center.y,
+                                15,
+                                "blue-bubble",
+                            ),
+                        300,
+                    );
+                } else {
+                    // Standard Aquatic Particle Splash
+                    spawnParticles(center.x, center.y, 15, "blue-bubble");
+                }
+
+                currentScore += points;
+                if (scoreDisplay) {
+                    scoreDisplay.innerText = currentScore;
+                }
+                updateRank();
+                showNotification(displayMsg);
+
+                renderFoundWords();
             }
 
-            // --- TOGGLE WORDS BUTTON ---
-            toggleBtn.addEventListener("click", function () {
-                this.blur(); // Crucial: drops focus so Enter key doesn't toggle it again
-                foundWordsContainer.classList.toggle("hidden");
+            function renderFoundWords() {
+                foundWordsList.innerHTML = "";
+                const sortedWords = Array.from(foundWords).sort();
+                const itemsPerPage = 20; // 10 per column * 2 columns
+                const totalPages = Math.max(
+                    1,
+                    Math.ceil(sortedWords.length / itemsPerPage),
+                );
 
-                if (foundWordsContainer.classList.contains("hidden")) {
-                    this.innerText = "Show Found Words";
-                } else {
-                    this.innerText = "Hide Found Words";
+                // Boundary check for page
+                if (foundWordsPage >= totalPages)
+                    foundWordsPage = totalPages - 1;
+                if (foundWordsPage < 0) foundWordsPage = 0;
+
+                const start = foundWordsPage * itemsPerPage;
+                const end = start + itemsPerPage;
+                const pageWords = sortedWords.slice(start, end);
+
+                pageWords.forEach((word) => {
+                    const listItem = document.createElement("li");
+                    listItem.innerText = word;
+                    foundWordsList.appendChild(listItem);
+                });
+
+                // Update Word Count in Header
+                modalWordCount.innerText = sortedWords.length;
+
+                // Update pagination UI
+                pageInfo.innerText = `Page ${foundWordsPage + 1} of ${totalPages}`;
+                prevPageBtn.disabled = foundWordsPage === 0;
+                nextPageBtn.disabled = foundWordsPage === totalPages - 1;
+            }
+
+            function changePage(delta) {
+                foundWordsPage += delta;
+                renderFoundWords();
+            }
+
+            function updateRank() {
+                const percentage =
+                    currentScore / currentPuzzle.totalPossibleScore;
+                let currentRankIndex = 0;
+
+                for (let i = RANKS.length - 1; i >= 0; i--) {
+                    if (percentage >= RANKS[i].threshold) {
+                        currentRankIndex = i;
+                        break;
+                    }
                 }
+
+                // Update the centered left-aligned rank name display
+                const activeRankDisplay = document.getElementById("active-rank-display");
+                const currentRankName = RANKS[currentRankIndex].name;
+                if (activeRankDisplay && activeRankDisplay.innerText !== currentRankName) {
+                    activeRankDisplay.innerText = currentRankName;
+                    
+                    // Restart text-slide animation
+                    activeRankDisplay.style.animation = "none";
+                    void activeRankDisplay.offsetWidth; // Trigger reflow
+                    activeRankDisplay.style.animation = "rank-text-slide 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both";
+                }
+
+                // Update milestone bubbles
+                const milestonesCount = RANKS.length - 1; // 9 milestones (excluding Kraken)
+                for (let i = 0; i < milestonesCount; i++) {
+                    const bubble = document.getElementById(`rank-bubble-${i}`);
+                    if (!bubble) continue;
+
+                    const wrapper = bubble.parentElement;
+
+                    if (i <= currentRankIndex) {
+                        // Reached! Let's pop it
+                        if (!bubble.classList.contains("reached")) {
+                            bubble.classList.add("reached");
+                            bubble.innerText = ""; // Empty inside when popped
+
+                            // Particle explosion centered on the reached rank bubble
+                            const rect = bubble.getBoundingClientRect();
+                            const bx = rect.left + rect.width / 2 + window.scrollX;
+                            const by = rect.top + rect.height / 2 + window.scrollY;
+                            spawnParticles(bx, by, 10, "pangram-gold");
+
+                            if (wrapper) {
+                                wrapper.classList.add("reached");
+                                // Wait 400ms for bubble-pop-vanish keyframes to complete, then hide the wrapper layout slot completely
+                                setTimeout(() => {
+                                    wrapper.style.display = "none";
+                                }, 400);
+                            }
+                        } else {
+                            // Already reached on load - hide layout slot instantly with no animation
+                            if (wrapper) {
+                                wrapper.classList.add("reached");
+                                wrapper.style.display = "none";
+                            }
+                        }
+                    } else if (i === currentRankIndex + 1) {
+                        // This is the NEXT milestone bubble! Display current score inside.
+                        bubble.innerText = currentScore;
+                        bubble.classList.add("next-milestone");
+                    } else {
+                        // Future unreached milestone. Keep it empty.
+                        bubble.innerText = "";
+                        bubble.classList.remove("next-milestone");
+                    }
+                }
+            }
+
+            // --- MODAL CONTROLS ---
+            modalOpenBtn.addEventListener("click", () => {
+                modalOpenBtn.blur();
+                wordsModal.classList.remove("hidden");
+            });
+
+            modalCloseBtn.addEventListener("click", () => {
+                wordsModal.classList.add("hidden");
             });
 
             // --- KEYBOARD LISTENER ---
             document.addEventListener("keydown", (e) => {
+                if (!currentPuzzle.allLetters) return;
+                if (!wordsModal.classList.contains("hidden")) return;
+
                 const key = e.key.toLowerCase();
                 const allowedLetters = [
-                    ...puzzleOuterLetters,
-                    puzzleCenterLetter,
+                    ...currentPuzzle.outerLetters,
+                    currentPuzzle.centerLetter,
                 ];
 
                 if (allowedLetters.includes(key)) {
-                    handleBubbleClick(key);
+                    // Find the bubble element that matches this letter for visual ripple feedback
+                    const bubbles = document.querySelectorAll(".bubble");
+                    let matchingBubble;
+                    for (let b of bubbles) {
+                        if (b.innerText.toLowerCase() === key) {
+                            matchingBubble = b;
+                            break;
+                        }
+                    }
+                    handleBubbleClick(key, matchingBubble);
                 } else if (key === "enter") {
-                    e.preventDefault(); // Stop browser from clicking focused buttons
+                    e.preventDefault();
                     submitWord();
                 } else if (key === "backspace") {
-                    e.preventDefault(); // Stop browser from navigating back
+                    e.preventDefault();
                     deleteLetter();
                 }
             });
