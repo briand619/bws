@@ -511,14 +511,13 @@
             }
             /* --- RANK BUBBLES --- */
             .rank-bubbles-container {
+                flex: 0 0 100px;
                 display: flex;
-                flex-direction: row;
-                justify-content: center;
-                align-items: center;
-                width: 100%;
+                flex-direction: column;
+                justify-content: left;
                 padding: 10px 15px;
                 box-sizing: border-box;
-                gap: 15px;
+                gap: 5 px;
                 overflow-x: auto;
                 scrollbar-width: none; /* Firefox */
             }
@@ -600,8 +599,20 @@
                     inset 1px 1px 4px rgba(255, 255, 255, 0.2);
             }
 
+            .rank-bubble-ghost {
+                grid-area: content;
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                flex-shrink: 0;
+                background: rgba(255, 255, 255, 0.02);
+                border: 1.5px dashed rgba(59, 130, 246, 0.2);
+                box-shadow: inset 0 0 6px rgba(59, 130, 246, 0.05);
+                pointer-events: none;
+            }
+
             .rank-milestone-wrapper.reached .rank-bubble {
-                animation: bubble-pop-vanish 0.6s ease-out both;
+                animation: bubble-pop-vanish 2.0s ease-out both;
                 pointer-events: none;
             }
 
@@ -803,6 +814,7 @@
             let foundWords = new Set();
             let foundWordsPage = 0;
             let notificationTimeout;
+            let currentRankIndexState = -1;
 
             const RANKS = [
                 { name: "Plankton", threshold: 0 },
@@ -973,6 +985,7 @@
             }
 
             function renderRankBubbles() {
+                currentRankIndexState = -1; // Reset rank state for the new puzzle!
                 const bubblesList = document.getElementById(
                     "milestone-bubbles-list",
                 );
@@ -986,10 +999,14 @@
                         const wrapper = document.createElement("div");
                         wrapper.className = "rank-milestone-wrapper";
 
+                        const ghostBubble = document.createElement("div");
+                        ghostBubble.className = "rank-bubble-ghost";
+
                         const bubble = document.createElement("div");
                         bubble.className = "rank-bubble";
                         bubble.id = `rank-bubble-${index}`;
 
+                        wrapper.appendChild(ghostBubble);
                         wrapper.appendChild(bubble);
                         bubblesList.appendChild(wrapper);
                     });
@@ -1387,26 +1404,23 @@
                     }
                 }
 
-                // Update the centered left-aligned rank name display
                 const activeRankDisplay = document.getElementById(
                     "active-rank-display",
                 );
                 const currentRankName = RANKS[currentRankIndex].name;
+                const milestonesCount = RANKS.length - 1; // 9 milestones (excluding Kraken)
+
                 if (
                     activeRankDisplay &&
                     activeRankDisplay.innerText !== currentRankName
                 ) {
                     activeRankDisplay.innerText = currentRankName;
-
-                    // Restart text-slide animation
                     activeRankDisplay.style.animation = "none";
-                    void activeRankDisplay.offsetWidth; // Trigger reflow
+                    void activeRankDisplay.offsetWidth; // reflow
                     activeRankDisplay.style.animation =
                         "rank-text-slide 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both";
                 }
 
-                // Update milestone bubbles
-                const milestonesCount = RANKS.length - 1; // 9 milestones (excluding Kraken)
                 for (let i = 0; i < milestonesCount; i++) {
                     const bubble = document.getElementById(`rank-bubble-${i}`);
                     if (!bubble) continue;
@@ -1414,12 +1428,12 @@
                     const wrapper = bubble.parentElement;
 
                     if (i <= currentRankIndex) {
-                        // Reached! Let's pop it
+                        // Reached
                         if (!bubble.classList.contains("reached")) {
                             bubble.classList.add("reached");
-                            bubble.innerText = ""; // Empty inside when popped
+                            bubble.innerText = "";
 
-                            // Particle explosion centered on the reached rank bubble
+                            // Spawn sparkling gold particles centered on the popped bubble
                             const rect = bubble.getBoundingClientRect();
                             const bx =
                                 rect.left + rect.width / 2 + window.scrollX;
@@ -1429,24 +1443,20 @@
 
                             if (wrapper) {
                                 wrapper.classList.add("reached");
-                                // Wait 600ms for bubble-pop-vanish keyframes to complete, then hide the wrapper layout slot completely
-                                setTimeout(() => {
-                                    wrapper.style.display = "none";
-                                }, 600);
                             }
                         } else {
-                            // Already reached on load - hide layout slot instantly with no animation
+                            bubble.style.opacity = "0";
+                            bubble.style.pointerEvents = "none";
                             if (wrapper) {
                                 wrapper.classList.add("reached");
-                                wrapper.style.display = "none";
                             }
                         }
                     } else if (i === currentRankIndex + 1) {
-                        // This is the NEXT milestone bubble! Display current score inside.
+                        // Next milestone
                         bubble.innerText = currentScore;
                         bubble.classList.add("next-milestone");
                     } else {
-                        // Future unreached milestone. Keep it empty.
+                        // Future milestone
                         bubble.innerText = "";
                         bubble.classList.remove("next-milestone");
                     }
