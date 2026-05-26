@@ -427,6 +427,21 @@
                 border-color: rgba(252, 211, 77, 0.6);
             }
 
+            .particle.water-droplet {
+                background: radial-gradient(
+                    circle at 30% 30%,
+                    rgba(255, 255, 255, 0.8) 0%,
+                    rgba(147, 197, 253, 0.4) 30%,
+                    rgba(59, 130, 246, 0.15) 70%,
+                    transparent 100%
+                );
+                border-color: rgba(255, 255, 255, 0.5);
+                box-shadow:
+                    inset -1px -1px 3px rgba(0, 0, 0, 0.15),
+                    inset 1px 1px 4px rgba(255, 255, 255, 0.4),
+                    0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+
             /* Fullscreen Ripple overlay for Pangrams */
             .pangram-ripple-overlay {
                 position: fixed;
@@ -578,7 +593,7 @@
                 color: rgba(255, 255, 255, 0.7);
                 position: relative;
                 flex-shrink: 0;
-                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                transition: all 2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
                 /* Standard Glassmorphic Bubble styling */
                 background:
@@ -1126,12 +1141,16 @@
                 const container = document.getElementById("particle-container");
                 if (!container) return;
 
+                const isDroplet = type === "water-droplet";
+
                 for (let i = 0; i < count; i++) {
                     const particle = document.createElement("div");
                     particle.className = `particle ${type}`;
 
-                    // Random size between 12px and 36px
-                    const size = Math.random() * 24 + 12;
+                    // Random size: droplets are smaller (6px to 18px), standard bubbles are 12px to 36px
+                    const size = isDroplet
+                        ? Math.random() * 12 + 6
+                        : Math.random() * 24 + 12;
                     particle.style.width = `${size}px`;
                     particle.style.height = `${size}px`;
 
@@ -1145,11 +1164,21 @@
 
                     // Generate random target coordinates
                     const angle = Math.random() * 2 * Math.PI;
-                    const distance = Math.random() * 140 + 40; // drift distance
-                    const tx = Math.cos(angle) * distance;
-                    const ty = Math.sin(angle) * distance - 80; // bias upwards
+                    const distance = isDroplet
+                        ? Math.random() * 90 + 30 // Droplets stay tighter
+                        : Math.random() * 140 + 40; // standard drift
 
-                    const duration = Math.random() * 0.8 + 0.6; // 0.6s to 1.4s
+                    // Droplets pop out in a clean 360-degree symmetrical splash!
+                    // Bubbles have an upward floating drift bias (-80px).
+                    const tx = Math.cos(angle) * distance;
+                    const ty = isDroplet
+                        ? Math.sin(angle) * distance
+                        : Math.sin(angle) * distance - 80;
+
+                    // Droplets burst much faster and snappier (0.4s to 0.8s) for higher energy realism!
+                    const duration = isDroplet
+                        ? Math.random() * 0.4 + 0.4
+                        : Math.random() * 0.8 + 0.6;
 
                     particle.style.transition = `transform ${duration}s cubic-bezier(0.1, 0.8, 0.2, 1), opacity ${duration}s ease-out`;
 
@@ -1427,19 +1456,19 @@
 
                     const wrapper = bubble.parentElement;
 
-                    if (i <= currentRankIndex) {
+                    if (i < currentRankIndex) {
                         // Reached
                         if (!bubble.classList.contains("reached")) {
                             bubble.classList.add("reached");
                             bubble.innerText = "";
 
-                            // Spawn sparkling gold particles centered on the popped bubble
+                            // Spawn sparkling water droplets centered on the popped bubble
                             const rect = bubble.getBoundingClientRect();
                             const bx =
                                 rect.left + rect.width / 2 + window.scrollX;
                             const by =
                                 rect.top + rect.height / 2 + window.scrollY;
-                            spawnParticles(bx, by, 10, "pangram-gold");
+                            spawnParticles(bx, by, 12, "water-droplet");
 
                             if (wrapper) {
                                 wrapper.classList.add("reached");
@@ -1451,7 +1480,7 @@
                                 wrapper.classList.add("reached");
                             }
                         }
-                    } else if (i === currentRankIndex + 1) {
+                    } else if (i === currentRankIndex) {
                         // Next milestone
                         bubble.innerText = currentScore;
                         bubble.classList.add("next-milestone");
