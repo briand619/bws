@@ -82,6 +82,125 @@
                 align-items: center;
             }
 
+            /* --- MENU (···) --- */
+            .menu-wrapper {
+                position: relative;
+            }
+
+            #menu-btn {
+                background: none;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                color: rgba(255, 255, 255, 0.7);
+                border-radius: 8px;
+                padding: 6px 10px;
+                font-size: 1rem;
+                cursor: pointer;
+                letter-spacing: 2px;
+                line-height: 1;
+                transition:
+                    background-color 0.2s,
+                    color 0.2s;
+            }
+
+            #menu-btn:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+                color: white;
+            }
+
+            .menu-dropdown {
+                position: absolute;
+                top: calc(100% + 8px);
+                right: 0;
+                min-width: 180px;
+                background: linear-gradient(
+                    145deg,
+                    rgba(15, 30, 60, 0.97),
+                    rgba(8, 18, 40, 0.99)
+                );
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 12px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+                overflow: hidden;
+                z-index: 300;
+                animation: menu-drop 0.18s cubic-bezier(0.34, 1.56, 0.64, 1)
+                    both;
+            }
+
+            .menu-dropdown.hidden {
+                display: none;
+            }
+
+            @keyframes menu-drop {
+                from {
+                    opacity: 0;
+                    transform: translateY(-6px) scale(0.96);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                }
+            }
+
+            .menu-item {
+                display: block;
+                width: 100%;
+                padding: 12px 16px;
+                background: none;
+                border: none;
+                color: rgba(255, 255, 255, 0.85);
+                font-size: 0.9rem;
+                text-align: left;
+                cursor: pointer;
+                transition: background-color 0.15s;
+            }
+
+            .menu-item:hover {
+                background-color: rgba(255, 255, 255, 0.07);
+                color: white;
+            }
+
+            .menu-confirm {
+                padding: 12px 16px;
+                border-top: 1px solid rgba(255, 255, 255, 0.08);
+            }
+
+            .menu-confirm p {
+                margin: 0 0 10px;
+                font-size: 0.8rem;
+                color: rgba(255, 255, 255, 0.5);
+                line-height: 1.4;
+            }
+
+            .menu-confirm-btns {
+                display: flex;
+                gap: 8px;
+            }
+
+            .menu-confirm-btns button {
+                flex: 1;
+                padding: 7px;
+                border: none;
+                border-radius: 8px;
+                font-size: 0.82rem;
+                font-weight: bold;
+                cursor: pointer;
+                transition: opacity 0.15s;
+            }
+
+            .menu-confirm-btns button:hover {
+                opacity: 0.85;
+            }
+
+            #menu-confirm-yes {
+                background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+                color: white;
+            }
+
+            #menu-confirm-cancel {
+                background: rgba(255, 255, 255, 0.1);
+                color: rgba(255, 255, 255, 0.7);
+            }
+
             #suggest-word-btn {
                 padding: 8px 16px;
                 background: linear-gradient(
@@ -131,8 +250,13 @@
             }
 
             @keyframes whale-bob {
-                0%, 100% { transform: translateY(0); }
-                50% { transform: translateY(-6px); }
+                0%,
+                100% {
+                    transform: translateY(0);
+                }
+                50% {
+                    transform: translateY(-6px);
+                }
             }
 
             .whale-modal-title {
@@ -149,8 +273,12 @@
             }
 
             @keyframes whale-shimmer {
-                0% { background-position: 0% center; }
-                100% { background-position: 200% center; }
+                0% {
+                    background-position: 0% center;
+                }
+                100% {
+                    background-position: 200% center;
+                }
             }
 
             .whale-modal-subtitle {
@@ -203,7 +331,9 @@
                 font-weight: bold;
                 letter-spacing: 0.5px;
                 cursor: pointer;
-                transition: transform 0.15s ease, box-shadow 0.15s ease;
+                transition:
+                    transform 0.15s ease,
+                    box-shadow 0.15s ease;
                 box-shadow: 0 4px 16px rgba(14, 165, 233, 0.35);
             }
 
@@ -1497,7 +1627,9 @@
             </div>
             <div class="top-bar-actions">
                 <div id="found-words-section">
-                    <div id="found-words-header">Words Found (<span id="found-words-count">0</span>)</div>
+                    <div id="found-words-header">
+                        Words Found (<span id="found-words-count">0</span>)
+                    </div>
                 </div>
                 <button type="button" id="theme-btn" title="Midnight Abyss">
                     <span id="theme-emoji">🌑</span>
@@ -1505,6 +1637,32 @@
                 <button type="button" id="suggest-word-btn">
                     <i class="fas fa-lightbulb"></i> Suggest
                 </button>
+                <div class="menu-wrapper">
+                    <button type="button" id="menu-btn" aria-label="Menu">
+                        ···
+                    </button>
+                    <div class="menu-dropdown hidden" id="menu-dropdown">
+                        <button
+                            type="button"
+                            class="menu-item"
+                            id="new-game-btn"
+                        >
+                            New Game
+                        </button>
+                        <div class="menu-confirm hidden" id="menu-confirm">
+                            <p>
+                                Start a new puzzle? Your current progress will
+                                be lost.
+                            </p>
+                            <div class="menu-confirm-btns">
+                                <button id="menu-confirm-yes">
+                                    Yes, new game
+                                </button>
+                                <button id="menu-confirm-cancel">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1524,23 +1682,36 @@
                 <div class="whale-modal-top">
                     <div class="whale-emoji-wrap">🐋</div>
                     <h2 class="whale-modal-title">BLUE WHALE!</h2>
-                    <p class="whale-modal-subtitle">You've reached the Blue Whale tier — the ocean depths bow before you!</p>
+                    <p class="whale-modal-subtitle">
+                        You've reached the Blue Whale tier — the ocean depths
+                        bow before you!
+                    </p>
                 </div>
                 <div class="whale-modal-stats">
                     <div class="whale-stat">
-                        <span class="whale-stat-value" id="whale-words-found">0</span>
+                        <span class="whale-stat-value" id="whale-words-found"
+                            >0</span
+                        >
                         <span class="whale-stat-label">Words Found</span>
                     </div>
                     <div class="whale-stat">
-                        <span class="whale-stat-value" id="whale-total-score">0</span>
+                        <span class="whale-stat-value" id="whale-total-score"
+                            >0</span
+                        >
                         <span class="whale-stat-label">Points Earned</span>
                     </div>
                     <div class="whale-stat">
-                        <span class="whale-stat-value" id="whale-words-remaining">0</span>
+                        <span
+                            class="whale-stat-value"
+                            id="whale-words-remaining"
+                            >0</span
+                        >
                         <span class="whale-stat-label">Words Remaining</span>
                     </div>
                 </div>
-                <button class="whale-continue-btn" id="whale-continue-btn">Keep Swimming 🌊</button>
+                <button class="whale-continue-btn" id="whale-continue-btn">
+                    Keep Swimming 🌊
+                </button>
             </div>
         </div>
 
@@ -1677,6 +1848,7 @@
 
             // --- GAME DATA ---
             let dictionary = new Set();
+            let wordList = [];
             let currentPuzzle = {};
 
             let allPangrams = [];
@@ -1752,16 +1924,12 @@
                         return response.json();
                     })
                     .then((data) => {
-                        let wordList = [];
-                        // Handle both Array format and Object (Key-based) format
-                        if (Array.isArray(data)) {
-                            wordList = data;
-                        } else {
-                            wordList = Object.keys(data);
-                        }
+                        let rawList = Array.isArray(data)
+                            ? data
+                            : Object.keys(data);
 
                         // Filter out short words
-                        wordList = wordList.filter((word) => word.length >= 4);
+                        wordList = rawList.filter((word) => word.length >= 4);
                         dictionary = new Set(wordList);
 
                         // Compute pangrams once; retries reuse this list
@@ -1769,15 +1937,17 @@
                             (w) => new Set(w.split("")).size === 7,
                         );
 
-                        // Generate dynamic puzzle from the dictionary
-                        let attempts = 0;
-                        while (attempts++ < allPangrams.length + 1) {
-                            if (generatePuzzle(wordList)) break;
-                            if (attempts > allPangrams.length) {
-                                loadingState.innerText =
-                                    "No suitable puzzle found in dictionary.";
-                                loadingState.style.color = "#ef4444";
-                                return;
+                        // Try restoring a saved session; fall back to generating a new puzzle
+                        if (!restoreSavedState()) {
+                            let attempts = 0;
+                            while (attempts++ < allPangrams.length + 1) {
+                                if (generatePuzzle()) break;
+                                if (attempts > allPangrams.length) {
+                                    loadingState.innerText =
+                                        "No suitable puzzle found in dictionary.";
+                                    loadingState.style.color = "#ef4444";
+                                    return;
+                                }
                             }
                         }
 
@@ -1787,6 +1957,7 @@
                         controlsContainer.style.visibility = "visible";
 
                         renderHive();
+                        saveGameState(); // persist initial state so refresh doesn't re-roll
                     })
                     .catch((error) => {
                         console.error("Error fetching dictionary:", error);
@@ -1797,7 +1968,7 @@
             }
 
             // --- PUZZLE GENERATION ---
-            function generatePuzzle(wordList) {
+            function generatePuzzle() {
                 const available = allPangrams.filter(
                     (x) => !excludedPangrams.has(x),
                 );
@@ -1862,15 +2033,105 @@
                 return true;
             }
 
-            function renderRankBubbles() {
-                currentRankIndexState = -1; // Reset rank state for the new puzzle!
+            // --- STATE PERSISTENCE ---
+            const STATE_KEY = "bws_state";
+
+            function saveGameState() {
+                const state = {
+                    allLetters: currentPuzzle.allLetters,
+                    centerLetter: currentPuzzle.centerLetter,
+                    outerLetters: currentPuzzle.outerLetters,
+                    validAnswers: Array.from(currentPuzzle.validAnswers),
+                    totalPossibleScore: currentPuzzle.totalPossibleScore,
+                    foundWords: Array.from(foundWords),
+                    score: currentScore,
+                };
+                localStorage.setItem(STATE_KEY, JSON.stringify(state));
+            }
+
+            function restoreSavedState() {
+                try {
+                    const raw = localStorage.getItem(STATE_KEY);
+                    if (!raw) return false;
+                    const s = JSON.parse(raw);
+
+                    // Basic shape validation
+                    if (
+                        !Array.isArray(s.allLetters) ||
+                        s.allLetters.length !== 7 ||
+                        typeof s.centerLetter !== "string" ||
+                        !Array.isArray(s.validAnswers) ||
+                        s.validAnswers.length < 1 ||
+                        !Array.isArray(s.foundWords) ||
+                        typeof s.score !== "number"
+                    )
+                        return false;
+
+                    // Validate all answers still exist in the current dictionary
+                    if (!s.validAnswers.every((w) => dictionary.has(w)))
+                        return false;
+
+                    // Compute current rank from restored score (to avoid replaying animations)
+                    const pct = s.score / s.totalPossibleScore;
+                    let restoredRank = 0;
+                    for (let i = RANKS.length - 1; i >= 0; i--) {
+                        if (pct >= RANKS[i].threshold) {
+                            restoredRank = i;
+                            break;
+                        }
+                    }
+
+                    currentPuzzle = {
+                        centerLetter: s.centerLetter,
+                        outerLetters: s.outerLetters,
+                        allLetters: s.allLetters,
+                        validAnswers: new Set(s.validAnswers),
+                        totalPossibleScore: s.totalPossibleScore,
+                    };
+                    foundWords = new Set(s.foundWords);
+                    currentScore = s.score;
+                    foundWordsPage = 0;
+
+                    renderRankBubbles(restoredRank);
+
+                    if (scoreDisplay) scoreDisplay.innerText = currentScore;
+                    const countEl =
+                        document.getElementById("found-words-count");
+                    if (countEl) countEl.innerText = foundWords.size;
+                    renderFoundWords();
+                    return true;
+                } catch {
+                    return false;
+                }
+            }
+
+            function startNewGame() {
+                localStorage.removeItem(STATE_KEY);
+                excludedPangrams = new Set();
+                currentInput = "";
+                previousWord = "";
+                previousWordWasUnknown = false;
+
+                let attempts = 0;
+                while (attempts++ < allPangrams.length + 1) {
+                    if (generatePuzzle()) break;
+                    if (attempts > allPangrams.length) {
+                        showNotification("No suitable puzzle found.");
+                        return;
+                    }
+                }
+                renderHive();
+                saveGameState();
+            }
+
+            function renderRankBubbles(initialRankIndex = -1) {
+                currentRankIndexState = initialRankIndex;
                 const bubblesList = document.getElementById(
                     "milestone-bubbles-list",
                 );
                 if (bubblesList) {
                     bubblesList.innerHTML = "";
 
-                    // Remove the top tier (the last element of RANKS) from the rendered milestones list
                     const milestones = RANKS.slice(0, -1);
 
                     milestones.forEach((rank, index) => {
@@ -1883,6 +2144,12 @@
                         const bubble = document.createElement("div");
                         bubble.className = "rank-bubble";
                         bubble.id = `rank-bubble-${index}`;
+
+                        // Pre-mark silently on restore so updateRank() skips particles
+                        if (initialRankIndex > 0 && index < initialRankIndex) {
+                            bubble.classList.add("reached");
+                            wrapper.classList.add("reached");
+                        }
 
                         wrapper.appendChild(ghostBubble);
                         wrapper.appendChild(bubble);
@@ -2252,6 +2519,7 @@
                 renderFoundWords();
                 const countEl = document.getElementById("found-words-count");
                 if (countEl) countEl.innerText = foundWords.size;
+                saveGameState();
             }
 
             function renderFoundWords(slideDir = 0) {
@@ -2405,7 +2673,10 @@
 
                 // Blue Whale milestone — show congratulations modal on first reach
                 const BLUE_WHALE_INDEX = 8;
-                if (currentRankIndex >= BLUE_WHALE_INDEX && currentRankIndexState < BLUE_WHALE_INDEX) {
+                if (
+                    currentRankIndex >= BLUE_WHALE_INDEX &&
+                    currentRankIndexState < BLUE_WHALE_INDEX
+                ) {
                     showWhaleModal();
                 }
                 currentRankIndexState = currentRankIndex;
@@ -2413,16 +2684,21 @@
 
             // --- BLUE WHALE MODAL ---
             const whaleModal = document.getElementById("whale-modal");
-            document.getElementById("whale-continue-btn").addEventListener("click", () => {
-                whaleModal.classList.add("hidden");
-            });
+            document
+                .getElementById("whale-continue-btn")
+                .addEventListener("click", () => {
+                    whaleModal.classList.add("hidden");
+                });
 
             function showWhaleModal() {
                 const totalWords = currentPuzzle.validAnswers.size;
                 const wordsFound = foundWords.size;
-                document.getElementById("whale-words-found").innerText = wordsFound;
-                document.getElementById("whale-total-score").innerText = currentScore;
-                document.getElementById("whale-words-remaining").innerText = totalWords - wordsFound;
+                document.getElementById("whale-words-found").innerText =
+                    wordsFound;
+                document.getElementById("whale-total-score").innerText =
+                    currentScore;
+                document.getElementById("whale-words-remaining").innerText =
+                    totalWords - wordsFound;
                 whaleModal.classList.remove("hidden");
             }
 
@@ -2498,7 +2774,9 @@
                 wordDetailPanel.classList.add("visible");
 
                 if (definitionCache.has(word)) {
-                    definitionContent.replaceChildren(definitionCache.get(word).cloneNode(true));
+                    definitionContent.replaceChildren(
+                        definitionCache.get(word).cloneNode(true),
+                    );
                     return;
                 }
 
@@ -2510,9 +2788,10 @@
                         `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`,
                     );
                     if (!res.ok) {
-                        const msg = res.status === 404
-                            ? `No definition found for "${word}"`
-                            : `Couldn't reach the dictionary service (${res.status})`;
+                        const msg =
+                            res.status === 404
+                                ? `No definition found for "${word}"`
+                                : `Couldn't reach the dictionary service (${res.status})`;
                         const el = document.createElement("div");
                         el.className = "def-not-found";
                         el.textContent = msg;
@@ -2539,7 +2818,8 @@
                 wordEl.textContent = entry.word;
                 root.appendChild(wordEl);
 
-                const phonetic = (entry.phonetics || []).find((p) => p.text)?.text || "";
+                const phonetic =
+                    (entry.phonetics || []).find((p) => p.text)?.text || "";
                 if (phonetic) {
                     const ph = document.createElement("div");
                     ph.className = "def-phonetic";
@@ -2580,7 +2860,9 @@
 
                 // Escape: close any open overlay (highest priority)
                 if (key === "Escape") {
-                    if (!suggestModal.classList.contains("hidden")) {
+                    if (!menuDropdown.classList.contains("hidden")) {
+                        closeMenu();
+                    } else if (!suggestModal.classList.contains("hidden")) {
                         suggestModal.classList.add("hidden");
                         suggestForm.reset();
                     } else if (wordsPopover.classList.contains("open")) {
@@ -2596,7 +2878,8 @@
                     !suggestModal.classList.contains("hidden") ||
                     wordsPopover.classList.contains("open") ||
                     !whaleModal.classList.contains("hidden")
-                ) return;
+                )
+                    return;
 
                 if (!currentPuzzle.allLetters) return;
 
@@ -2622,6 +2905,62 @@
                 } else if (key === "Backspace") {
                     e.preventDefault();
                     deleteLetter();
+                }
+            });
+
+            // --- MENU (···) ---
+            const menuBtn = document.getElementById("menu-btn");
+            const menuDropdown = document.getElementById("menu-dropdown");
+            const menuConfirm = document.getElementById("menu-confirm");
+            const newGameBtn = document.getElementById("new-game-btn");
+
+            function openMenu() {
+                menuConfirm.classList.add("hidden");
+                newGameBtn.classList.remove("hidden");
+                menuDropdown.classList.remove("hidden");
+            }
+
+            function closeMenu() {
+                menuDropdown.classList.add("hidden");
+                menuConfirm.classList.add("hidden");
+                newGameBtn.classList.remove("hidden");
+            }
+
+            menuBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                if (menuDropdown.classList.contains("hidden")) {
+                    openMenu();
+                } else {
+                    closeMenu();
+                }
+            });
+
+            newGameBtn.addEventListener("click", () => {
+                newGameBtn.classList.add("hidden");
+                menuConfirm.classList.remove("hidden");
+            });
+
+            document
+                .getElementById("menu-confirm-yes")
+                .addEventListener("click", () => {
+                    closeMenu();
+                    startNewGame();
+                });
+
+            document
+                .getElementById("menu-confirm-cancel")
+                .addEventListener("click", () => {
+                    menuConfirm.classList.add("hidden");
+                    newGameBtn.classList.remove("hidden");
+                });
+
+            // Close menu when clicking outside
+            document.addEventListener("click", (e) => {
+                if (
+                    !menuBtn.contains(e.target) &&
+                    !menuDropdown.contains(e.target)
+                ) {
+                    closeMenu();
                 }
             });
 
@@ -2659,7 +2998,9 @@
             suggestOpenBtn.addEventListener("click", () => {
                 suggestOpenBtn.blur();
                 suggestModal.classList.remove("hidden");
-                suggestWordInput.value = previousWordWasUnknown ? previousWord : "";
+                suggestWordInput.value = previousWordWasUnknown
+                    ? previousWord
+                    : "";
 
                 // Focus the input after the modal entry animation
                 setTimeout(() => suggestWordInput.focus(), 350);
@@ -2881,7 +3222,11 @@
                 localStorage.getItem("bws_theme") || "0",
                 10,
             );
-            if (Number.isNaN(currentThemeIndex) || currentThemeIndex < 0 || currentThemeIndex >= THEMES.length) {
+            if (
+                Number.isNaN(currentThemeIndex) ||
+                currentThemeIndex < 0 ||
+                currentThemeIndex >= THEMES.length
+            ) {
                 currentThemeIndex = 0;
             }
 
