@@ -3,6 +3,7 @@ using System;
 using BubbleSplash.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BubbleSplash.Api.Migrations
 {
     [DbContext(typeof(BubbleSplashDbContext))]
-    partial class BubbleSplashDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260611001634_FixCreatedAtDefaultValue")]
+    partial class FixCreatedAtDefaultValue
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

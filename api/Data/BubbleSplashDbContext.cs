@@ -45,7 +45,7 @@ public class BubbleSplashDbContext : DbContext
 
             entity.Property(e => e.CreatedAtUtc)
                 .HasColumnName("created_at_utc")
-                .HasDefaultValueSql("now() at time zone 'utc'");
+                .HasDefaultValueSql("now()");
 
             entity.Property(e => e.ReviewedAtUtc)
                 .HasColumnName("reviewed_at_utc");

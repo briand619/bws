@@ -1,16 +1,24 @@
 using Microsoft.EntityFrameworkCore;
 using BubbleSplash.Api.Data;
+using BubbleSplash.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // --- Services ---
 
 // EF Core + PostgreSQL
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+    throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured.");
+
 builder.Services.AddDbContext<BubbleSplashDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
 
 // Controllers
 builder.Services.AddControllers();
+
+// Dictionary file writer (singleton for the semaphore to be effective)
+builder.Services.AddSingleton<DictionaryService>();
 
 // OpenAPI / Swagger
 builder.Services.AddOpenApi();
@@ -37,6 +45,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
 
 app.MapControllers();

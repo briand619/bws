@@ -56,6 +56,24 @@
             .score-display {
                 font-size: 1.2rem;
                 font-weight: bold;
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+            }
+
+            .game-title {
+                font-size: 1.1rem;
+                font-weight: bold;
+            }
+
+            .score-value {
+                font-size: 0.85rem;
+                font-weight: normal;
+                color: rgba(255, 255, 255, 0.6);
+            }
+
+            .score-value::before {
+                content: "Score: ";
             }
 
             .top-bar-actions {
@@ -66,9 +84,13 @@
 
             #suggest-word-btn {
                 padding: 8px 16px;
-                background-color: rgba(255, 255, 255, 0.1);
+                background: linear-gradient(
+                    135deg,
+                    rgba(59, 130, 246, 0.2),
+                    rgba(147, 51, 234, 0.2)
+                );
                 color: white;
-                border: 1px solid rgba(255, 255, 255, 0.3);
+                border: 1px solid rgba(147, 51, 234, 0.4);
                 border-radius: 20px;
                 font-weight: bold;
                 cursor: pointer;
@@ -80,15 +102,6 @@
 
             #suggest-word-btn:active {
                 background-color: rgba(255, 255, 255, 0.2);
-            }
-
-            #suggest-word-btn {
-                background: linear-gradient(
-                    135deg,
-                    rgba(59, 130, 246, 0.2),
-                    rgba(147, 51, 234, 0.2)
-                );
-                border-color: rgba(147, 51, 234, 0.4);
             }
 
             #suggest-word-btn:hover {
@@ -1144,10 +1157,10 @@
                 flex: 0 0 auto;
                 display: flex;
                 flex-direction: column;
-                justify-content: left;
+                justify-content: flex-start;
                 padding: 10px 15px;
                 box-sizing: border-box;
-                gap: 5 px;
+                gap: 5px;
                 overflow-x: auto;
                 scrollbar-width: none;
                 /* Firefox */
@@ -1478,10 +1491,13 @@
             "
         ></div>
         <div class="top-bar">
-            <div class="score-display">Bubble Splash</div>
+            <div class="score-display">
+                <span class="game-title">Bubble Splash</span>
+                <span class="score-value" id="current-score">0</span>
+            </div>
             <div class="top-bar-actions">
                 <div id="found-words-section">
-                    <div id="found-words-header">Words Found</div>
+                    <div id="found-words-header">Words Found (<span id="found-words-count">0</span>)</div>
                 </div>
                 <button type="button" id="theme-btn" title="Midnight Abyss">
                     <span id="theme-emoji">🌑</span>
@@ -1656,15 +1672,20 @@
         </div>
 
         <script>
+            // --- CONFIG ---
+            const API_BASE_URL = "http://10.0.0.90:5179";
+
             // --- GAME DATA ---
             let dictionary = new Set();
             let currentPuzzle = {};
 
-            let excludedPangrams = [];
+            let allPangrams = [];
+            let excludedPangrams = new Set();
 
             // --- STATE ---
             let currentInput = "";
             let previousWord = "";
+            let previousWordWasUnknown = false;
             let currentScore = 0;
             let foundWords = new Set();
             let foundWordsPage = 0;
@@ -1743,9 +1764,21 @@
                         wordList = wordList.filter((word) => word.length >= 4);
                         dictionary = new Set(wordList);
 
+                        // Compute pangrams once; retries reuse this list
+                        allPangrams = wordList.filter(
+                            (w) => new Set(w.split("")).size === 7,
+                        );
+
                         // Generate dynamic puzzle from the dictionary
-                        while (true) {
+                        let attempts = 0;
+                        while (attempts++ < allPangrams.length + 1) {
                             if (generatePuzzle(wordList)) break;
+                            if (attempts > allPangrams.length) {
+                                loadingState.innerText =
+                                    "No suitable puzzle found in dictionary.";
+                                loadingState.style.color = "#ef4444";
+                                return;
+                            }
                         }
 
                         // Reveal UI
@@ -1765,25 +1798,15 @@
 
             // --- PUZZLE GENERATION ---
             function generatePuzzle(wordList) {
-                // Find all words that have exactly 7 unique letters
-                let pangrams = wordList.filter(
-                    (word) => new Set(word.split("")).size === 7,
+                const available = allPangrams.filter(
+                    (x) => !excludedPangrams.has(x),
                 );
 
-                pangrams = pangrams.filter(
-                    (x) => !excludedPangrams.includes(x),
-                );
+                if (available.length === 0) return false;
 
-                if (pangrams.length === 0) {
-                    showNotification(
-                        "Error: No 7-letter pangrams found in dictionary!",
-                    );
-                    return;
-                }
-
-                // Pick a random pangram from the list
+                // Pick a random pangram from the available list
                 const randomPangram =
-                    pangrams[Math.floor(Math.random() * pangrams.length)];
+                    available[Math.floor(Math.random() * available.length)];
 
                 // Extract the 7 unique letters
                 let uniqueLetters = Array.from(
@@ -1799,16 +1822,19 @@
                     ];
                 }
 
+                const centerLetter = uniqueLetters[0];
+                const letterSet = new Set(uniqueLetters);
+
                 const validAnswers = wordList.filter((word) => {
-                    if (!word.includes(uniqueLetters[0])) return false;
-                    for (let char of word) {
-                        if (!uniqueLetters.includes(char)) return false;
+                    if (!word.includes(centerLetter)) return false;
+                    for (const char of word) {
+                        if (!letterSet.has(char)) return false;
                     }
                     return true;
                 });
 
-                if (validAnswers.length > 85) {
-                    excludedPangrams.push(randomPangram);
+                if (validAnswers.length > 85 || validAnswers.length < 15) {
+                    excludedPangrams.add(randomPangram);
                     return false;
                 }
 
@@ -1828,6 +1854,10 @@
                 renderRankBubbles();
                 foundWordsPage = 0;
                 foundWords = new Set();
+                currentScore = 0;
+                if (scoreDisplay) scoreDisplay.innerText = 0;
+                const countEl = document.getElementById("found-words-count");
+                if (countEl) countEl.innerText = 0;
                 renderFoundWords();
                 return true;
             }
@@ -2061,6 +2091,10 @@
 
             // --- INTERACTION LOGIC ---
             function handleBubbleClick(letter, bubbleElement) {
+                if (currentInput.length >= 20) {
+                    triggerErrorFeedback();
+                    return;
+                }
                 currentInput += letter;
                 updateInputDisplay();
 
@@ -2100,8 +2134,8 @@
                     );
                 }
 
-                // Randomize positions of the 6 outer bubbles
-                const indices = [0, 1, 2, 3, 4, 5];
+                // Randomize positions of the outer bubbles
+                const indices = currentPuzzle.outerLetters.map((_, i) => i);
                 for (let i = indices.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [indices[i], indices[j]] = [indices[j], indices[i]];
@@ -2138,6 +2172,7 @@
                 const word = currentInput.toLowerCase();
 
                 previousWord = word;
+                previousWordWasUnknown = false;
 
                 if (word.length < 4) {
                     showNotification("Too short");
@@ -2150,6 +2185,7 @@
                     triggerErrorFeedback();
                 } else if (!currentPuzzle.validAnswers.has(word)) {
                     showNotification("Not in word list");
+                    previousWordWasUnknown = true;
                     triggerErrorFeedback();
                 } else {
                     processValidWord(word);
@@ -2209,21 +2245,20 @@
                 }
 
                 currentScore += points;
-                if (scoreDisplay) {
-                    scoreDisplay.innerText = currentScore;
-                }
+                if (scoreDisplay) scoreDisplay.innerText = currentScore;
                 updateRank();
                 showNotification(displayMsg);
 
                 renderFoundWords();
+                const countEl = document.getElementById("found-words-count");
+                if (countEl) countEl.innerText = foundWords.size;
             }
 
             function renderFoundWords(slideDir = 0) {
                 const sortedWords = Array.from(foundWords).sort();
-                const itemsPerPage = 8;
                 const totalPages = Math.max(
                     1,
-                    Math.ceil(sortedWords.length / itemsPerPage),
+                    Math.ceil(sortedWords.length / WORDS_PER_PAGE),
                 );
 
                 if (foundWordsPage >= totalPages)
@@ -2231,8 +2266,8 @@
                 if (foundWordsPage < 0) foundWordsPage = 0;
 
                 const pageWords = sortedWords.slice(
-                    foundWordsPage * itemsPerPage,
-                    (foundWordsPage + 1) * itemsPerPage,
+                    foundWordsPage * WORDS_PER_PAGE,
+                    (foundWordsPage + 1) * WORDS_PER_PAGE,
                 );
 
                 // Page dots
@@ -2278,10 +2313,12 @@
                 }
             }
 
+            const WORDS_PER_PAGE = 8;
+
             function changePage(delta) {
                 const total = Math.max(
                     1,
-                    Math.ceil(Array.from(foundWords).length / 8),
+                    Math.ceil(foundWords.size / WORDS_PER_PAGE),
                 );
                 const next = foundWordsPage + delta;
                 if (next < 0 || next >= total) return;
@@ -2429,14 +2466,7 @@
                     wordDetailPanel.classList.remove("visible");
                 });
 
-            document.addEventListener("keydown", (e) => {
-                if (
-                    e.key === "Escape" &&
-                    wordsPopover.classList.contains("open")
-                ) {
-                    closeWordsPopover();
-                }
-            });
+            // (Escape for wordsPopover handled in the unified keydown listener below)
 
             // Swipe left/right on words list to change page
             let swipeStartX = 0;
@@ -2459,71 +2489,137 @@
                 { passive: true },
             );
 
+            const definitionCache = new Map();
+
             async function showDefinition(word) {
                 const detailTitle =
                     document.getElementById("detail-word-title");
                 detailTitle.textContent = word;
+                wordDetailPanel.classList.add("visible");
+
+                if (definitionCache.has(word)) {
+                    definitionContent.replaceChildren(definitionCache.get(word).cloneNode(true));
+                    return;
+                }
+
                 definitionContent.innerHTML =
                     '<div class="def-spinner"><div class="def-spinner-ring"></div></div>';
-                wordDetailPanel.classList.add("visible");
 
                 try {
                     const res = await fetch(
                         `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`,
                     );
-                    if (!res.ok) throw new Error("not found");
+                    if (!res.ok) {
+                        const msg = res.status === 404
+                            ? `No definition found for "${word}"`
+                            : `Couldn't reach the dictionary service (${res.status})`;
+                        const el = document.createElement("div");
+                        el.className = "def-not-found";
+                        el.textContent = msg;
+                        definitionContent.replaceChildren(el);
+                        return;
+                    }
                     const data = await res.json();
-                    definitionContent.innerHTML = buildDefinitionHTML(data[0]);
+                    const node = buildDefinitionNode(data[0]);
+                    definitionCache.set(word, node);
+                    definitionContent.replaceChildren(node.cloneNode(true));
                 } catch {
-                    definitionContent.innerHTML = `<div class="def-not-found">No definition found for "<strong>${word}</strong>"</div>`;
+                    const el = document.createElement("div");
+                    el.className = "def-not-found";
+                    el.textContent = "Couldn't reach the dictionary service.";
+                    definitionContent.replaceChildren(el);
                 }
             }
 
-            function buildDefinitionHTML(entry) {
-                let html = `<div class="def-word">${entry.word}</div>`;
-                const phonetic =
-                    (entry.phonetics || []).find((p) => p.text)?.text || "";
-                if (phonetic)
-                    html += `<div class="def-phonetic">${phonetic}</div>`;
+            function buildDefinitionNode(entry) {
+                const root = document.createDocumentFragment();
+
+                const wordEl = document.createElement("div");
+                wordEl.className = "def-word";
+                wordEl.textContent = entry.word;
+                root.appendChild(wordEl);
+
+                const phonetic = (entry.phonetics || []).find((p) => p.text)?.text || "";
+                if (phonetic) {
+                    const ph = document.createElement("div");
+                    ph.className = "def-phonetic";
+                    ph.textContent = phonetic;
+                    root.appendChild(ph);
+                }
+
                 (entry.meanings || []).forEach((meaning) => {
-                    html += `<div class="def-pos">${meaning.partOfSpeech}</div><ol class="def-list">`;
+                    const pos = document.createElement("div");
+                    pos.className = "def-pos";
+                    pos.textContent = meaning.partOfSpeech;
+                    root.appendChild(pos);
+
+                    const ol = document.createElement("ol");
+                    ol.className = "def-list";
                     meaning.definitions.slice(0, 3).forEach((def) => {
-                        html += `<li>${def.definition}`;
-                        if (def.example)
-                            html += `<div class="def-example">"${def.example}"</div>`;
-                        html += `</li>`;
+                        const li = document.createElement("li");
+                        li.textContent = def.definition;
+                        if (def.example) {
+                            const ex = document.createElement("div");
+                            ex.className = "def-example";
+                            ex.textContent = `"${def.example}"`;
+                            li.appendChild(ex);
+                        }
+                        ol.appendChild(li);
                     });
-                    html += `</ol>`;
+                    root.appendChild(ol);
                 });
-                return html;
+
+                const wrapper = document.createElement("div");
+                wrapper.appendChild(root);
+                return wrapper;
             }
 
-            // --- KEYBOARD LISTENER ---
+            // --- UNIFIED KEYBOARD LISTENER ---
             document.addEventListener("keydown", (e) => {
-                if (!currentPuzzle.allLetters) return;
-                if (!suggestModal.classList.contains("hidden")) return;
+                const key = e.key;
 
-                const key = e.key.toLowerCase();
+                // Escape: close any open overlay (highest priority)
+                if (key === "Escape") {
+                    if (!suggestModal.classList.contains("hidden")) {
+                        suggestModal.classList.add("hidden");
+                        suggestForm.reset();
+                    } else if (wordsPopover.classList.contains("open")) {
+                        closeWordsPopover();
+                    } else if (!whaleModal.classList.contains("hidden")) {
+                        whaleModal.classList.add("hidden");
+                    }
+                    return;
+                }
+
+                // Block game input while any modal/popover is open
+                if (
+                    !suggestModal.classList.contains("hidden") ||
+                    wordsPopover.classList.contains("open") ||
+                    !whaleModal.classList.contains("hidden")
+                ) return;
+
+                if (!currentPuzzle.allLetters) return;
+
+                const lower = key.toLowerCase();
                 const allowedLetters = [
                     ...currentPuzzle.outerLetters,
                     currentPuzzle.centerLetter,
                 ];
 
-                if (allowedLetters.includes(key)) {
-                    // Find the bubble element that matches this letter for visual ripple feedback
+                if (allowedLetters.includes(lower)) {
                     const bubbles = document.querySelectorAll(".bubble");
                     let matchingBubble;
-                    for (let b of bubbles) {
-                        if (b.innerText.toLowerCase() === key) {
+                    for (const b of bubbles) {
+                        if (b.innerText.toLowerCase() === lower) {
                             matchingBubble = b;
                             break;
                         }
                     }
-                    handleBubbleClick(key, matchingBubble);
-                } else if (key === "enter") {
+                    handleBubbleClick(lower, matchingBubble);
+                } else if (key === "Enter") {
                     e.preventDefault();
                     submitWord();
-                } else if (key === "backspace") {
+                } else if (key === "Backspace") {
                     e.preventDefault();
                     deleteLetter();
                 }
@@ -2563,8 +2659,7 @@
             suggestOpenBtn.addEventListener("click", () => {
                 suggestOpenBtn.blur();
                 suggestModal.classList.remove("hidden");
-                console.log(previousWord);
-                suggestWordInput.value = previousWord.toLowerCase();
+                suggestWordInput.value = previousWordWasUnknown ? previousWord : "";
 
                 // Focus the input after the modal entry animation
                 setTimeout(() => suggestWordInput.focus(), 350);
@@ -2583,16 +2678,7 @@
                 }
             });
 
-            // Close on Escape key
-            document.addEventListener("keydown", (e) => {
-                if (
-                    e.key === "Escape" &&
-                    !suggestModal.classList.contains("hidden")
-                ) {
-                    suggestModal.classList.add("hidden");
-                    suggestForm.reset();
-                }
-            });
+            // (Escape for suggestModal handled in the unified keydown listener below)
 
             suggestForm.addEventListener("submit", async (e) => {
                 e.preventDefault();
@@ -2666,7 +2752,7 @@
              * @returns {Promise<Object>} API response data
              */
             async function submitWordSuggestion(word, reason) {
-                const API_URL = "http://10.0.0.90:5179/api/suggestions";
+                const API_URL = `${API_BASE_URL}/api/suggestions`;
 
                 const response = await fetch(API_URL, {
                     method: "POST",
@@ -2795,7 +2881,9 @@
                 localStorage.getItem("bws_theme") || "0",
                 10,
             );
-            if (currentThemeIndex >= THEMES.length) currentThemeIndex = 0;
+            if (Number.isNaN(currentThemeIndex) || currentThemeIndex < 0 || currentThemeIndex >= THEMES.length) {
+                currentThemeIndex = 0;
+            }
 
             function createRays() {
                 const container = document.getElementById("bg-rays");
@@ -2925,9 +3013,13 @@
                     pebbles,
                     starfish;
 
+                let resizeTimer;
                 function resize() {
                     W = canvas.width = window.innerWidth;
                     canvas.height = FLOOR_H;
+                    // Debounce regeneration so it doesn't fire on every pixel during resize
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(generate, 150);
                 }
 
                 // Pre-compute a coral branch tree so draw() is deterministic
