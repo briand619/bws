@@ -1,7 +1,12 @@
 # Code Review — Bubble Word Splash
 
-Review date: 2026-06-10. Scope: `ui/index.html` (game UI, ~1,900 lines), `api/` (ASP.NET Core
+Initial review: 2026-06-10. Scope: `ui/index.html` (game UI), `api/` (ASP.NET Core
 suggestions API), and project configuration. Findings are grouped by severity, then by area.
+
+**Re-reviewed 2026-06-11** after the latest UI commit ("Latest UI.", `5e90a00`) — see the
+[Re-review section](#re-review-of-uiindexhtml--2026-06-11) at the bottom for the status of
+each original finding and new findings in the rewritten file. Line numbers in the original
+sections below refer to the pre-rewrite file and are stale.
 
 ---
 
@@ -181,3 +186,119 @@ suggestions API), and project configuration. Findings are grouped by severity, t
   and uses the double-`requestAnimationFrame` idiom correctly.
 - Client-side validation in the suggest form mirrors the server's rules (4+ letters,
   letters-only, duplicate check against the loaded dictionary).
+
+---
+
+# Re-review of ui/index.html — 2026-06-11
+
+The UI was substantially rewritten (1,941 → 3,177 lines). New features: a 5-theme background
+system (animated light rays, rising bubbles, persisted to `localStorage`), a canvas-drawn
+ocean floor (rocks, seaweed, coral, starfish), a "Words Found" bottom-sheet popover with
+per-word dictionary definitions (via `dictionaryapi.dev`), page-dot + swipe pagination, and a
+Blue Whale congratulations modal.
+
+## Status of original findings
+
+| # | Finding | Status |
+|---|---------|--------|
+| 1 | Score never displayed (`#current-score` / `#current-rank` don't exist) | **Still open** — dead lookups remain at `index.html:1692-1693`; score is still only visible in the next-milestone rank bubble |
+| 2 | Infinite loop / hang in puzzle generation (`while(true)` + falsy return) | **Still open** (`index.html:1747-1749`, `1777-1782`) |
+| 3 | Typing in suggest modal leaks into the game | **Fixed** — the game keydown handler now bails when the suggest modal is open (`index.html:2504`). But see new finding N1: the same leak now exists for the words popover and whale modal |
+| 4 | Hardcoded localhost API URL | **Still open, arguably worse** — now `http://10.0.0.90:5179` (`index.html:2669`), a private LAN IP that fails for anyone outside the developer's network, plus mixed-content blocking on HTTPS |
+| 5 | Invalid CSS (`gap: 5 px`, `justify-content: left`) | **Still open** (`index.html:1147,1150`) |
+| 9 | Pangram list recomputed per retry | Still open |
+| 10 | `uniqueLetters.includes(char)` array scan in answers filter | Still open |
+| 11 | Multiple document-level keydown listeners | Still open — now **three** (game, popover Escape, suggest Escape) |
+| 12 | Mixed inline `onclick` / `addEventListener` styles | Still open |
+| 13 | Font Awesome CDN for a few icons | Still open |
+| 16 | No game-state persistence | Partially addressed — the **theme** is persisted, but puzzle/score/found words still reset on refresh |
+| 17 | No minimum answer count for puzzles | Still open |
+| 18 | Unlimited input length | Still open |
+| 19 | Accessibility (no zoom, no dialog roles/focus trap) | Still open; `#bg-layer` does get `aria-hidden` |
+| 20 | `shuffleLetters` hardcodes 6 outer bubbles | Still open |
+
+API findings (#6-8, #14-15, #22-26) are unaffected — no API changes in this commit.
+
+## New findings
+
+### Bugs
+
+- **N1 — Keyboard still leaks into the game behind the words popover and whale modal.**
+  The keydown guard only checks the suggest modal (`index.html:2504`). With the words popover
+  open, typed letters land in the game input and Backspace/Enter still delete/submit invisibly
+  behind the sheet; same for the whale modal. The old code blocked input while the (since
+  removed) words modal was open, so this is a partial regression. Extend the guard:
+  popover `.open`, whale modal not `.hidden`.
+
+- **N2 — XSS sink in the definition renderer.** `buildDefinitionHTML()`
+  (`index.html:2482-2499`) interpolates `entry.word`, phonetics, part of speech, definitions,
+  and examples from the third-party `dictionaryapi.dev` response directly into `innerHTML`.
+  Any HTML in the API payload executes in the page. Low likelihood (HTTPS, reputable-ish API)
+  but it is untrusted external data; build the DOM with `textContent` or escape the strings.
+
+- **N3 — Corrupt `localStorage` theme value bricks the whole game.**
+  `parseInt(localStorage.getItem("bws_theme") || "0", 10)` (`index.html:2794`) yields `NaN`
+  for any non-numeric stored value; the `>= THEMES.length` guard doesn't catch `NaN`, so
+  `applyTheme(THEMES[NaN])` throws on `theme.vars`. Because that call is top-level script
+  code that runs *before* `initGame()` (`index.html:3174`), the exception stops the script
+  and the page is stuck on "Loading Dictionary..." forever. Guard with `Number.isNaN` (or
+  `THEMES[idx] ?? THEMES[0]`).
+
+- **N4 — Ocean floor isn't regenerated on resize.** The `resize` handler
+  (`index.html:3163`) only resets canvas width; `generate()` is never re-run, so after a
+  rotation or window-widening the rocks/seaweed/coral only cover the old width and the new
+  area is bare floor.
+
+- **N5 — Leftover debug `console.log(previousWord)`** in the suggest-open handler
+  (`index.html:2566`).
+
+### Inefficiencies / redundancies
+
+- **N6 — `changePage` rebuilds an array just to count it**:
+  `Array.from(foundWords).length` (`index.html:2284`) instead of `foundWords.size`. Also
+  hardcodes `8` items-per-page separately from `renderFoundWords`'s `itemsPerPage = 8` —
+  extract a shared constant.
+
+- **N7 — Duplicate `#suggest-word-btn` CSS rule blocks** (`index.html:67-79` and `85-92`)
+  — the second overrides the first's `background`; merge them.
+
+- **N8 — Definitions are re-fetched on every click.** A simple `Map` cache of
+  word → definition HTML would avoid repeat network round-trips when reopening a word.
+
+- **N9 — Background animation runs unconditionally.** The canvas `requestAnimationFrame`
+  loop and the 2.8 s `setInterval` bubble spawner never pause (rAF self-pauses in hidden
+  tabs, but the interval keeps queuing work and the loop runs even when the popover/modals
+  fully cover the scene). Consider pausing on `visibilitychange`, and honoring
+  `prefers-reduced-motion` for the rays/bubbles/floor sway.
+
+### Improvements
+
+- **N10 — Suggest prefill UX.** Opening the suggest modal pre-fills the last submitted word
+  (`previousWord`, `index.html:2567`) — a nice touch for "my word was rejected" flows, but it
+  also pre-fills after *successful* submissions (where it then trips the "already in the
+  dictionary" error) and after too-short accidental submits. Only prefill when the previous
+  submission failed with "Not in word list". (Also `.toLowerCase()` there is redundant —
+  `previousWord` is already lowercased.)
+
+- **N11 — Word count no longer visible.** The old modal header showed "Words Found (N)";
+  the new popover header and trigger button show no count. Re-adding the count to the
+  "Words Found" trigger is cheap and useful.
+
+- **N12 — Network-vs-missing distinction in definitions.** The `catch` in `showDefinition`
+  (`index.html:2477`) shows "No definition found" for both 404s and network failures
+  (offline Capacitor use). Distinguishing the two ("couldn't reach the dictionary service")
+  avoids telling users a real word has no definition.
+
+- **N13 — `currentScore` is never reset in `generatePuzzle`.** Harmless today because only
+  one puzzle is ever generated per page load, but it's a landmine for any future
+  "New Game" button: score, rank, and the whale-modal state would carry over. Reset
+  `currentScore = 0` alongside `foundWords`.
+
+## What improved since the last review
+
+- The suggest-modal keyboard leak (original #3) was fixed via the keydown guard.
+- The theme choice is persisted to `localStorage` — first step toward state persistence.
+- The clunky Prev/Next paginated modal was replaced with a slicker popover with page dots
+  and swipe gestures, and word definitions are a genuinely nice addition.
+- The new background/ocean-floor code is well-contained (IIFE, pre-computed coral branch
+  geometry so the draw loop stays cheap, self-removing DOM bubbles).
